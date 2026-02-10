@@ -12,7 +12,11 @@
             href="#"
             v-for="link in navLinks"
             :key="link.name"
-            class="{'text-white': link.active, 'text-netflix-light-gray': !link.active}"
+            :class="{
+              'text-white': link.active,
+              'text-netflix-light-gray': !link.active,
+            }"
+            class="text-sm font-medium transition-colors hover:text-gray-300"
             >{{ link.name }}</a
           >
         </nav>
@@ -49,6 +53,37 @@
     </div>
 
     <!-- Mobile Menu -->
+    <transition name="fade">
+      <nav
+        v-if="isMobileMenuOpen"
+        class="md:hidden bg-black/95 backdrop-blur-sm px-8 space-y-4"
+      >
+        <a
+          href="#"
+          v-for="link in navLinks"
+          :key="link.name"
+          class="block text-base font-medium transition-colors hover:text-gray-300"
+          :class="{
+            'text-white': link.active,
+            'text-netflix-light-gray': !link.active,
+          }"
+          >{{ link.name }}</a
+        >
+        <div class="flex items-center space-x-4 pt-4 border-t border-gray-700">
+          <button class="text-white hover:text-gray-300 transition-colors">
+            <Icon icon="ic:round-search" width="24" />
+          </button>
+          <button class="text-white hover:text-gray-300 transition-colors">
+            <Icon icon="mdi:bell-outline" width="24" />
+          </button>
+          <div
+            class="w-8 h-8 rounded bg-netflix-red flex items-center justify-center"
+          >
+            <Icon icon="mdi:account" width="24" />
+          </div>
+        </div>
+      </nav>
+    </transition>
   </header>
 </template>
 
@@ -65,3 +100,14 @@ const navLinks = ref([
 
 const isMobileMenuOpen = ref(false);
 </script>
+
+<style>
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+</style>
