@@ -5,9 +5,16 @@
     <AppHeader />
     <HeroBanner :featured="featuredContent" />
     <div
-      class="relative z-10 -mt-2 pb-20 space-y-16 max-w-screen overflow-x-hidden"
+      class="relative z-10 -mt-32 pb-20 space-y-16 max-w-screen overflow-x-hidden"
     >
       <SpotlightCarousel :items="spotlightCarousel" data-aos="fade-up" />
+      <MovieRow
+        :title="movieRows[0].title"
+        :movies="movieRows[0].movies"
+        :size="movieRows[0].size"
+        :type="movieRows[0].type"
+        data-aos="fade-up"
+      />
     </div>
   </div>
 </template>
@@ -19,6 +26,7 @@ import "aos/dist/aos.css";
 import AppHeader from "./components/AppHeader.vue";
 import HeroBanner from "./components/HeroBanner.vue";
 import SpotlightCarousel from "./components/SpotlightCarousel.vue";
+import MovieRow from "./components/MovieRow.vue";
 
 const featuredContent = ref({
   title: "Shang-Chi and the Legend of the Ten Rings",
@@ -56,6 +64,22 @@ const spotlightCarousel = ref([
       "Political interference in the Avengers' activities causes a rift between former allies Captain America and Black Widow.",
   },
 ]);
+
+const movieRows = ref([
+  {
+    title: "Continue Watching",
+    movies: [
+      { id: 1, title: "Avatar", imageUrl: "/movies/avatar.webp" },
+      { id: 2, title: "Babylon", imageUrl: "/movies/babylon.webp" },
+      { id: 3, title: "The Godfather", imageUrl: "/movies/godfather.webp" },
+      { id: 4, title: "Nobody", imageUrl: "/movies/nobody.webp" },
+      { id: 5, title: "Wakanda Forever", imageUrl: "/movies/wakanda.webp" },
+    ],
+    size: "medium",
+    type: "progress",
+  },
+]);
+
 onMounted(() => {
   AOS.init({
     duration: 800,
