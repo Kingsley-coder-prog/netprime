@@ -15,6 +15,12 @@
         :type="movieRows[0].type"
         data-aos="fade-up"
       />
+      <FeaturedCategory
+        title="New & Popular"
+        :featured="movieRows[1].movies[0]"
+        :items="movieRows[1].movies.slice(1, 5)"
+        data-aos="fade-up"
+      />
     </div>
   </div>
 </template>
@@ -27,6 +33,7 @@ import AppHeader from "./components/AppHeader.vue";
 import HeroBanner from "./components/HeroBanner.vue";
 import SpotlightCarousel from "./components/SpotlightCarousel.vue";
 import MovieRow from "./components/MovieRow.vue";
+import FeaturedCategory from "./components/FeaturedCategory.vue";
 
 const featuredContent = ref({
   title: "Shang-Chi and the Legend of the Ten Rings",
@@ -69,7 +76,7 @@ const movieRows = ref([
   {
     title: "Continue Watching",
     movies: [
-      { id: 1, title: "Avatar", imageUrl: "/movies/avatar.webp" },
+      { id: 1, title: "Captain America", imageUrl: "/movies/captAmerica.webp" },
       { id: 2, title: "Babylon", imageUrl: "/movies/babylon.webp" },
       { id: 3, title: "The Godfather", imageUrl: "/movies/godfather.webp" },
       { id: 4, title: "Nobody", imageUrl: "/movies/nobody.webp" },
@@ -77,6 +84,33 @@ const movieRows = ref([
     ],
     size: "medium",
     type: "progress",
+  },
+  {
+    title: "Popular on NetPrime",
+    movies: [
+      { id: 1, title: "Avatar", imageUrl: "/movies/avatar.webp", rating: 7.8 },
+      { id: 2, title: "300", imageUrl: "/movies/300.webp", rating: 7.6 },
+      {
+        id: 3,
+        title: "Oppenheimer",
+        imageUrl: "/movies/oppenheimer.webp",
+        rating: 8.3,
+      },
+      {
+        id: 4,
+        title: "Sinners",
+        imageUrl: "/movies/sinners.webp",
+        rating: 7.2,
+      },
+      {
+        id: 5,
+        title: "Thunderbolts",
+        imageUrl: "/movies/thunderbolts.webp",
+        rating: 6.9,
+      },
+    ],
+    size: "large",
+    type: "rating",
   },
 ]);
 
