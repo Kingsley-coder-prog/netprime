@@ -32,6 +32,7 @@
         data-aos="fade-up"
       />
     </div>
+    <AppFooter />
   </div>
 </template>
 
@@ -45,6 +46,7 @@ import SpotlightCarousel from "./components/SpotlightCarousel.vue";
 import MovieRow from "./components/MovieRow.vue";
 import FeaturedCategory from "./components/FeaturedCategory.vue";
 import GenreGrid from "./components/GenreGrid.vue";
+import AppFooter from "./components/AppFooter.vue";
 
 const featuredContent = ref({
   title: "Shang-Chi and the Legend of the Ten Rings",
