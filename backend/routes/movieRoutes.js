@@ -1,5 +1,5 @@
-import express from "express";
-import {
+const express = require("express");
+const {
   getAllMovies,
   getMovieById,
   createMovie,
@@ -8,8 +8,7 @@ import {
   getFeaturedMovies,
   getTrendingMovies,
   getPopularMovies,
-} from "../controllers/movieController.js";
-
+} = require("../controllers/movieController.js");
 const router = express.Router();
 
 router.get("/", getAllMovies);
@@ -21,4 +20,4 @@ router.post("/", createMovie);
 router.put("/:id", updateMovie);
 router.delete("/:id", deleteMovie);
 
-export default router;
+module.exports = router;

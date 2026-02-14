@@ -1,5 +1,5 @@
-import express from "express";
-import {
+const express = require("express");
+const {
   getUserProfile,
   updateUserProfile,
   addToWatchlist,
@@ -8,8 +8,8 @@ import {
   addToWatchHistory,
   getWatchHistory,
   setFavoriteGenres,
-} from "../controllers/userController.js";
-import { protect } from "../middleware/auth.js";
+} = require("../controllers/userController.js");
+const { protect } = require("../middleware/auth.js");
 
 const router = express.Router();
 
@@ -22,4 +22,4 @@ router.post("/watch-history", protect, addToWatchHistory);
 router.get("/watch-history", protect, getWatchHistory);
 router.put("/favorite-genres", protect, setFavoriteGenres);
 
-export default router;
+module.exports = router;

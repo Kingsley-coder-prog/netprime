@@ -59,6 +59,16 @@ npm run seed
 
 The server will start on `http://localhost:5000` by default.
 
+## Swagger UI
+
+After installing dependencies, start the backend and open the Swagger UI at:
+
+```
+http://localhost:5000/api-docs
+```
+
+You can also fetch the raw OpenAPI spec at `http://localhost:5000/api-docs.json`.
+
 ## API Endpoints
 
 ### Authentication Routes `/api/auth`
