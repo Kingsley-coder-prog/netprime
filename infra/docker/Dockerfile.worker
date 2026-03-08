@@ -1,0 +1,2 @@
+# Includes FFmpeg
+FROM node:18-alpine
