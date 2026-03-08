@@ -1,0 +1,807 @@
+# NetPrime Backend Architecture - System Design Document
+
+## Overview
+A sophisticated, scalable movie streaming backend designed to handle millions of concurrent users with low latency and high availability.
+
+---
+
+## 1. SYSTEM ARCHITECTURE LAYERS
+
+### **Layer 1: Client Layer**
+```
+┌─────────────────────────────────────────────────────────┐
+│                    CLIENT APPLICATIONS                   │
+├──────────────────┬──────────────────┬──────────────────┤
+│   Web Client     │  Mobile Client   │ Desktop Client   │
+│   (Vue.js)       │ (React Native)   │   (Electron)     │
+└──────────────────┴──────────────────┴──────────────────┘
+                         │
+                         ▼
+```
+
+---
+
+## 2. CONTENT DELIVERY NETWORK (CDN) - For Movie Files
+
+### **Architecture Decision: CDN for Movie Distribution**
+```
+┌─────────────────────────────────────────────────────────────────┐
+│        GLOBAL CDN NETWORK (CloudFlare / AWS CloudFront)         │
+├──────────┬──────────────┬──────────┬──────────────┬──────────┤
+│  US-EAST │  EUROPE     │  ASIA    │  SOUTH ASIA  │  LATAM   │
+│ Edge #1  │  Edge #2    │ Edge #3  │   Edge #4    │ Edge #5  │
+└──────────┴──────────────┴──────────┴──────────────┴──────────┘
+                         │
+                         ▼
+┌─────────────────────────────────────────────────────────────────┐
+│              ORIGIN STORAGE TIER 1: AWS S3                      │
+├─────────────────────────────────────────────────────────────────┤
+│ • Movie files (MP4/HLS/DASH formats)                            │
+│ • High-resolution thumbnails & posters                          │
+│ • Subtitles (multiple languages)                                │
+│ • Backup & archival storage                                     │
+│ • Cross-region replication for disaster recovery                │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### **Why CDN for Movies?**
+- **Low Latency**: Users download from nearest edge server
+- **Bandwidth Optimization**: Origin server traffic reduced by 80-90%
+- **Geographic Load Distribution**: Automatic failover between regions
+- **DDoS Protection**: Built-in security at edge
+- **Cost Efficiency**: Reduced origin bandwidth costs
+- **Scalability**: Handle traffic spikes without origin overload
+
+### **Streaming Formats**
+- **Progressive Download**: MP4 for small files
+- **Adaptive Bitrate**: HLS (HTTP Live Streaming) for quality adaptation
+- **Alternative**: DASH (Dynamic Adaptive Streaming over HTTP)
+
+---
+
+## 3. API GATEWAY & LOAD BALANCING LAYER
+
+```
+┌──────────────────────────────────────────────────────────┐
+│        LOAD BALANCER (Nginx / HAProxy)                   │
+├──────────────────────────────────────────────────────────┤
+│ • Round-robin distribution across API instances          │
+│ • SSL/TLS termination & encryption                       │
+│ • Connection pooling                                     │
+│ • Health checks (active/passive)                         │
+│ • Session persistence (sticky sessions)                  │
+│ • WebSocket support for real-time features              │
+└──────────────────────────────────────────────────────────┘
+                         │
+        ┌────────────────┼────────────────┐
+        ▼                ▼                ▼
+┌──────────────┐  ┌──────────────┐  ┌──────────────┐
+│  API Server  │  │  API Server  │  │  API Server  │
+│   Instance   │  │   Instance   │  │   Instance   │
+│   (Node 1)   │  │   (Node 2)   │  │   (Node N)   │
+└──────────────┘  └──────────────┘  └──────────────┘
+
+Each Instance includes:
+┌────────────────────────────────────────────────────────┐
+│  Express.js Server (CommonJS)                          │
+├────────────────────────────────────────────────────────┤
+│ ► Request validation & sanitization                    │
+│ ► Rate limiting middleware (via Redis)                 │
+│ ► Authentication check (JWT validation)                │
+│ ► Request/Response logging                             │
+│ ► Error handling & transformation                      │
+│ ► API versioning (v1, v2, v3)                         │
+│ ► Canary deployment support                            │
+│ ► Service discovery & routing                          │
+└────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 4. MICROSERVICES LAYER (Node.js + CommonJS)
+
+```
+┌────────────────────────────────────────────────────────────┐
+│           MICROSERVICES ARCHITECTURE                       │
+├────────┬──────────────┬─────────────┬──────────┬───────────┤
+│
+│ AUTH    │ MOVIE        │ STREAMING   │ USER     │ UPLOAD    │
+│ SERVICE │ SERVICE      │ SERVICE     │ SERVICE  │ SERVICE   │
+│         │              │             │          │           │
+│ • JWT   │ • CRUD       │ • Playback  │ • Profile│ • Validate│
+│ • OAuth │ • Search     │ • Bitrate   │ • Prefs  │ • Upload  │
+│ • MFA   │ • Filter     │ • Download  │ • Watch  │ • Queue   │
+│ • Roles │ • Rate/Rev   │ • Progress  │ • Subs   │ • Progress│
+│ • Perms │ • Cache      │ • Quality   │ • Accnt  │ • Error   │
+└────────┴──────────────┴─────────────┴──────────┴───────────┘
+        │
+        ├────────────────┬──────────────┬────────────────┐
+        ▼                ▼              ▼                ▼
+
+┌──────────────────┐  ┌──────────────┐  ┌─────────────┐
+│ NOTIFICATION     │  │ SEARCH       │  │ ANALYTICS   │
+│ SERVICE          │  │ SERVICE      │  │ SERVICE     │
+│                  │  │              │  │             │
+│ • Emails         │  │ • Elasticsearch
+│ • Push notif     │  │ • Movie index
+│ • In-app msgs    │  │ • User search
+│ • WebSocket      │  │ • Full-text
+│ • SMS (opt)      │  │ • Autocomplete
+└──────────────────┘  └──────────────┘  └─────────────┘
+```
+
+### **Service Communication**
+- **Synchronous**: HTTP/REST for immediate responses
+- **Asynchronous**: Message Queue (RabbitMQ) for fire-and-forget events
+- **Real-time**: WebSocket + Redis Pub/Sub for notifications
+
+---
+
+## 5. CACHING & RATE LIMITING LAYER
+
+```
+┌─────────────────────────────────────────────────────────┐
+│        REDIS CLUSTER (3+ nodes with Sentinel)           │
+├─────────────────────────────────────────────────────────┤
+│  NODE 1          │  NODE 2          │  NODE 3          │
+│  (Master)        │  (Slave)         │  (Slave)         │
+│                  │                  │                  │
+│  Cache           │  Cache           │  Cache           │
+│  Sessions        │  Sessions        │  Sessions        │
+│  Rate Limits     │  Rate Limits     │  Rate Limits     │
+└─────────────────────────────────────────────────────────┘
+
+FEATURES:
+├─ Session Management
+│  └─ Distributed sessions (user auth state)
+│
+├─ Rate Limiting (Token Bucket Algorithm)
+│  ├─ Per user: 100 req/min
+│  ├─ Per IP: 1000 req/min
+│  ├─ Per endpoint: 500 req/min
+│  └─ Burst allowance: 20 requests
+│
+├─ Cache Layer (LRU eviction)
+│  ├─ Movies (TTL: 1 hour)
+│  ├─ User profiles (TTL: 30 min)
+│  ├─ Genre lists (TTL: 6 hours)
+│  ├─ Search results (TTL: 5 min)
+│  └─ Frequently accessed data
+│
+├─ Real-time Features
+│  ├─ Online user count
+│  ├─ Viewing statistics
+│  └─ Live counters
+│
+└─ Pub/Sub for Events
+   ├─ Notifications
+   ├─ Real-time updates
+   └─ Chat messages
+```
+
+### **Rate Limiting Strategy**
+```
+User Request
+    │
+    ▼
+┌──────────────────────┐
+│ Token Bucket Check   │
+├──────────────────────┤
+│ Tokens available? ─┐ NO → 429 Too Many Requests
+│                    │
+│                   YES
+│                    │
+│                    ▼
+│            Decrement token
+│            Allow request
+└──────────────────────┘
+    │
+    ▼
+Service Processing
+```
+
+---
+
+## 6. DATABASE LAYER - MongoDB
+
+```
+┌──────────────────────────────────────────────────────────┐
+│      MONGODB REPLICA SET (3+ nodes)                      │
+├──────────┬──────────────┬──────────────┬────────────────┤
+│ PRIMARY  │ SECONDARY 1  │ SECONDARY 2  │ ARBITER        │
+│ (Read)   │  (Backup)    │  (Backup)    │ (Consensus)    │
+│ (Write)  │              │              │                │
+└──────────┴──────────────┴──────────────┴────────────────┘
+
+SHARDING STRATEGY:
+├─ Shard Key: userId (ensures even distribution)
+├─ Number of shards: 3-10 (based on data size)
+├─ Auto-balancing enabled
+└─ Chunk size: 64MB (optimal for media metadata)
+
+COLLECTIONS & INDEXES:
+│
+├─ users
+│  ├─ _id (primary)
+│  ├─ email (unique index)
+│  ├─ username (unique index)
+│  └─ createdAt (TTL index: 30 days for soft deletes)
+│
+├─ movies
+│  ├─ _id (primary)
+│  ├─ title (text index for search)
+│  ├─ genre (index)
+│  ├─ releaseYear (index)
+│  ├─ rating (index)
+│  ├─ viewCount (index for trending)
+│  └─ compound index: {genre, releaseYear, rating}
+│
+├─ subscriptions
+│  ├─ userId (index, shard key)
+│  ├─ tier (index)
+│  ├─ expiryDate (TTL index)
+│  └─ status (index)
+│
+├─ ratings_reviews
+│  ├─ userId (index)
+│  ├─ movieId (index)
+│  ├─ rating (index)
+│  ├─ compound index: {movieId, userId}
+│  └─ TTL cleanup: 1 year
+│
+├─ watch_history
+│  ├─ userId (index, shard key)
+│  ├─ movieId (index)
+│  ├─ watchedAt (index, TTL: 1 year)
+│  └─ progress (last position)
+│
+├─ watchlists
+│  ├─ userId (index, shard key)
+│  ├─ movieIds (array, index)
+│  └─ createdAt
+│
+└─ sessions
+   ├─ userId (index)
+   ├─ token (index)
+   ├─ expiresAt (TTL index: auto-delete)
+   └─ deviceInfo
+
+REPLICATION & DURABILITY:
+├─ Write concern: Majority (prevents data loss)
+├─ Read preference: Secondary (load distribution)
+├─ Backup frequency: Daily snapshots
+├─ Cross-region backup: Enabled
+├─ Recovery time objective (RTO): < 4 hours
+└─ Recovery point objective (RPO): < 1 hour
+```
+
+---
+
+## 7. MESSAGE QUEUE & ASYNC PROCESSING
+
+```
+┌────────────────────────────────────────────────────────┐
+│    MESSAGE BROKER (RabbitMQ with Dead Letter Queue)   │
+├────────────────────────────────────────────────────────┤
+│ Exchanges:                                             │
+│ ├─ video.processing (for transcoding jobs)            │
+│ ├─ notifications (for emails/push)                    │
+│ ├─ analytics (for tracking events)                    │
+│ └─ deadletter (failed messages)                       │
+│                                                        │
+│ Queues:                                               │
+│ ├─ transcoding_queue (5+ workers)                     │
+│ ├─ thumbnail_queue (3+ workers)                       │
+│ ├─ image_optimize_queue (2 workers)                   │
+│ ├─ email_queue (2 workers)                            │
+│ ├─ notification_queue (3 workers)                     │
+│ └─ analytics_queue (batch processor)                  │
+│                                                        │
+│ Settings:                                              │
+│ ├─ Message TTL: 7 days                                │
+│ ├─ Queue TTL: 30 days                                 │
+│ ├─ Dead letter retention: 7 days                      │
+│ ├─ Durability: Disk-backed                            │
+│ └─ Persistence: Enabled                               │
+└────────────────────────────────────────────────────────┘
+                        │
+                        ▼
+┌────────────────────────────────────────────────────────┐
+│           WORKER POOL (BullMQ + Bull-Board)            │
+├────────────────────────────────────────────────────────┤
+│                                                        │
+│ Video Processing Workers (5-20 instances):            │
+│ ├─ FFmpeg transcoding (MP4, HLS, DASH)               │
+│ ├─ Subtitle extraction & conversion                  │
+│ ├─ Audio track extraction                            │
+│ └─ Metadata extraction (duration, resolution, etc)   │
+│                                                        │
+│ Media Optimization Workers (3-8 instances):          │
+│ ├─ Thumbnail generation (poster + preview)           │
+│ ├─ Image optimization (WebP, AVIF formats)           │
+│ ├─ CDN purge cache invalidation                      │
+│ └─ Manifest generation (HLS, DASH)                   │
+│                                                        │
+│ Notification Workers (2-5 instances):                │
+│ ├─ Email sending (transactional & marketing)         │
+│ ├─ Push notifications (Firebase Cloud Messaging)     │
+│ ├─ SMS (Twilio integration)                          │
+│ └─ In-app notifications                              │
+│                                                        │
+│ Analytics Workers (1-3 instances):                   │
+│ ├─ Aggregate views & ratings                         │
+│ ├─ Generate trending lists                           │
+│ ├─ User behavior analysis                            │
+│ └─ Generate reports                                  │
+│                                                        │
+│ Admin Workers (1 instance):                          │
+│ ├─ Cleanup old watch history                         │
+│ ├─ Regenerate caches                                 │
+│ └─ Database maintenance                              │
+│                                                        │
+└────────────────────────────────────────────────────────┘
+                        │
+            ┌───────────┼───────────┐
+            ▼           ▼           ▼
+        [ S3 ]  [ CDN ]  [ MongoDB ]
+      (storage) (cache)  (database)
+```
+
+### **Job Lifecycle**
+```
+Service creates job
+    │
+    ▼
+Job added to queue
+    │
+    ▼
+Worker picks up job
+    │
+    ├─ On success → Complete & delete
+    │
+    └─ On failure (retries: 3)
+        ├─ Retry 1 (1 min)
+        ├─ Retry 2 (5 min)
+        ├─ Retry 3 (30 min)
+        └─ Failed → Dead Letter Queue (manual review)
+```
+
+---
+
+## 8. FILE STORAGE ARCHITECTURE
+
+```
+┌─────────────────────────────────────────────────────────┐
+│         TIERED FILE STORAGE SYSTEM                      │
+├─────────────────────────────────────────────────────────┤
+│
+│ TIER 1: CDN (Hot Storage)
+│ ├─ Popular movies (viewed in last 7 days)
+│ ├─ New releases
+│ ├─ Trending content
+│ └─ Low latency, high cost
+│
+│ TIER 2: S3 Standard (Warm Storage)
+│ ├─ All current movie files
+│ ├─ Recently accessed
+│ ├─ TTL: 30-90 days
+│ └─ Medium latency, medium cost
+│
+│ TIER 3: S3 Glacier (Cold Storage)
+│ ├─ Archived movies (not streaming)
+│ ├─ Compliance backups
+│ ├─ TTL: 1+ year
+│ └─ High latency, very low cost
+│
+└─────────────────────────────────────────────────────────┘
+
+Storage Lifecycle Policy:
+├─ Days 0-7: CDN + S3 Standard
+├─ Days 7-30: S3 Standard only (auto remove from CDN)
+├─ Days 30-90: S3 Standard + S3 Intelligent-Tiering
+├─ Days 90+: S3 Glacier (automatic after 90 days)
+└─ Years 1+: S3 Glacier Deep Archive
+```
+
+---
+
+## 9. HANDLING HEAVY LOAD & SCALING
+
+### **Horizontal Scaling Strategy**
+```
+LOAD INCREASES
+    │
+    ▼
+┌─────────────────────────────┐
+│ Auto-scaling Triggers       │
+├─────────────────────────────┤
+│ CPU > 70%                   │
+│ Memory > 80%                │
+│ Request queue depth > 100   │
+│ Response time > 500ms (p95) │
+└─────────────────────────────┘
+    │
+    ▼
+┌─────────────────────────────┐
+│ Kubernetes Orchestration    │
+├─────────────────────────────┤
+│ • Spin up new pods          │
+│ • Distribute load balancer  │
+│ • Scale specific services   │
+│ • Max replicas: 50          │
+│ • Min replicas: 2           │
+│ • Scale down after 10 min   │
+└─────────────────────────────┘
+```
+
+### **Database Scaling**
+```
+Single Instance
+    │
+    ▼
+Replica Set (Read Replicas)
+    │
+    ▼
+Sharded Cluster (Horizontal Partitioning)
+    │
+    ├─ Shard 1: Users A-G
+    ├─ Shard 2: Users H-P
+    ├─ Shard 3: Users Q-Z
+    └─ Auto-rebalancing enabled
+```
+
+### **Cache Scalability**
+- Redis Cluster (automatic sharding)
+- 3+ nodes minimum
+- Auto-failover via Sentinel
+- Persistent storage enabled
+
+### **Load Balancing Strategy**
+```
+Round-Robin (simple)
+    └─ Equal distribution
+
+Least Connections (recommended)
+    └─ Routes to server with fewest active connections
+
+Resource-based
+    └─ Routes based on CPU/memory
+
+Geographic
+    └─ Route to nearest data center
+```
+
+---
+
+## 10. MONITORING, LOGGING & OBSERVABILITY
+
+```
+┌──────────────────────────────────────────────────────┐
+│         OBSERVABILITY STACK                          │
+├──────────┬─────────────┬──────────┬─────────────────┤
+│ LOGGING  │ METRICS     │ TRACING  │ ALERTING        │
+│          │             │          │                 │
+│ ELK/     │ Prometheus  │ Jaeger   │ PagerDuty/      │
+│ Datadog  │ Grafana     │ Zipkin   │ Opsgenie        │
+└──────────┴─────────────┴──────────┴─────────────────┘
+
+LOGGING (Winston + ELK):
+├─ Log Levels:
+│  ├─ ERROR (500 status)
+│  ├─ WARN (slow queries, near limits)
+│  ├─ INFO (request/response)
+│  ├─ DEBUG (variable values)
+│  └─ TRACE (detailed flow)
+│
+├─ Structured Logging:
+│  {
+│    "timestamp": "2026-03-08T12:00:00Z",
+│    "level": "INFO",
+│    "service": "movie-service",
+│    "traceId": "abc123",
+│    "userId": "user456",
+│    "action": "get_movies",
+│    "duration_ms": 45,
+│    "status": 200
+│  }
+│
+├─ Log Retention: 30-90 days
+└─ Search: Full-text across all logs
+
+METRICS (Prometheus + Grafana):
+├─ System Metrics:
+│  ├─ CPU usage (core, %)
+│  ├─ Memory usage (GB, %)
+│  ├─ Disk I/O (read/write ops/sec)
+│  ├─ Network bandwidth (in/out)
+│  └─ Open file descriptors
+│
+├─ Application Metrics:
+│  ├─ Request count (per endpoint)
+│  ├─ Response time (p50, p95, p99)
+│  ├─ Error rate (errors/minute)
+│  ├─ Throughput (req/sec)
+│  └─ Queue depth
+│
+├─ Business Metrics:
+│  ├─ Active users
+│  ├─ Streaming sessions
+│  ├─ Movies uploaded
+│  ├─ Conversion rate
+│  └─ User retention
+│
+├─ Database Metrics:
+│  ├─ Query latency
+│  ├─ Connections active
+│  ├─ Replication lag
+│  ├─ Shard distribution
+│  └─ Index usage
+│
+└─ Cache Metrics:
+   ├─ Hit rate (%)
+   ├─ Eviction rate
+   ├─ Memory usage
+   └─ Command latency
+
+DISTRIBUTED TRACING (Jaeger):
+├─ Track request flow across services
+├─ Identify bottlenecks
+├─ Visualize service dependencies
+└─ 10% sample rate (cost optimization)
+
+ALERTING:
+├─ Critical:
+│  ├─ Error rate > 1%
+│  ├─ API response time > 1s (p95)
+│  ├─ Database unavailable
+│  └─ Redis cluster down
+│
+├─ Warning:
+│  ├─ Error rate > 0.1%
+│  ├─ Response time > 500ms (p95)
+│  ├─ Queue depth > 10,000
+│  └─ Cache hit rate < 70%
+│
+└─ Info:
+   ├─ Deployment started/completed
+   ├─ Auto-scaling triggered
+   └─ Nightly batch jobs completed
+```
+
+---
+
+## 11. SECURITY ARCHITECTURE
+
+```
+┌──────────────────────────────────────────────────────┐
+│         SECURITY LAYERS                              │
+├──────────────────────────────────────────────────────┤
+│
+│ 1. NETWORK SECURITY
+│  ├─ WAF (Web Application Firewall)
+│  ├─ DDoS protection (CloudFlare)
+│  ├─ VPC (Virtual Private Cloud)
+│  ├─ Security groups (whitelist IPs)
+│  └─ HTTPS/TLS 1.3 everywhere
+│
+│ 2. APPLICATION SECURITY
+│  ├─ JWT with RS256 encryption
+│  ├─ Input validation & sanitization
+│  ├─ Rate limiting per IP/user
+│  ├─ CORS (Cross-Origin Resource Sharing)
+│  ├─ CSRF protection
+│  └─ Content Security Policy
+│
+│ 3. DATA SECURITY
+│  ├─ Encryption at rest (AES-256)
+│  ├─ Encryption in transit (TLS)
+│  ├─ Password hashing (bcrypt, salt)
+│  ├─ PII masking in logs
+│  └─ Data retention policies
+│
+│ 4. ACCESS CONTROL
+│  ├─ Role-based access (RBAC)
+│  ├─ OAuth2 / OpenID Connect
+│  ├─ Multi-factor authentication (MFA)
+│  ├─ Service-to-service auth (mTLS)
+│  └─ Audit logging (all access)
+│
+└──────────────────────────────────────────────────────┘
+```
+
+---
+
+## 12. DISASTER RECOVERY & HIGH AVAILABILITY
+
+```
+┌──────────────────────────────────────────────────────┐
+│     DISASTER RECOVERY STRATEGY                       │
+├──────────────────────────────────────────────────────┤
+│
+│ Recovery Time Objective (RTO): < 15 minutes
+│ Recovery Point Objective (RPO): < 1 hour
+│
+│ REDUNDANCY LAYERS:
+│
+│ 1. Service Redundancy
+│  ├─ Minimum 3 instances per service
+│  ├─ Across 3 availability zones
+│  ├─ Automatic failover
+│  └─ Health checks every 10 seconds
+│
+│ 2. Database Redundancy
+│  ├─ Replica set with 3+ nodes
+│  ├─ Automatic failover to secondary
+│  ├─ Regular backups (daily)
+│  ├─ Point-in-time recovery
+│  └─ Cross-region replication
+│
+│ 3. Cache Redundancy
+│  ├─ Redis cluster (3+ nodes)
+│  ├─ Sentinel for monitoring
+│  ├─ Automatic failover
+│  └─ Data replication across nodes
+│
+│ 4. Storage Redundancy
+│  ├─ S3 cross-region replication
+│  ├─ Multiple CDN providers
+│  ├─ Backup storage (Glacier)
+│  └─ Local backup mirrors
+│
+│ BACKUP STRATEGY:
+│ ├─ Full backup: Daily at 2 AM UTC
+│ ├─ Incremental: Every 6 hours
+│ ├─ Continuous replication: Real-time
+│ ├─ Retention: 30 days online, 1 year archive
+│ └─ Test restore: Monthly verification
+│
+└──────────────────────────────────────────────────────┘
+```
+
+---
+
+## 13. DEPLOYMENT & CI/CD PIPELINE
+
+```
+┌──────────────────────────────────────────────────────┐
+│         CI/CD PIPELINE                               │
+├──────────────────────────────────────────────────────┤
+│
+│ Code Commit
+│    │
+│    ▼
+│ GitHub Actions / GitLab CI
+│    ├─ Run tests (unit, integration)
+│    ├─ Code quality checks (SonarQube)
+│    ├─ Security scanning (OWASP)
+│    ├─ Build Docker images
+│    └─ Push to registry
+│    │
+│    ▼
+│ Staging Deployment
+│    ├─ Deploy to staging cluster
+│    ├─ Run smoke tests
+│    ├─ Performance tests
+│    └─ Security scanning
+│    │
+│    ▼
+│ Approval Gate
+│    │
+│    ▼
+│ Production Deployment
+│    ├─ Canary deployment (5% traffic)
+│    ├─ Monitor for errors (5 min)
+│    ├─ Gradual rollout (25%, 50%, 100%)
+│    ├─ Automated rollback on errors
+│    └─ Health checks
+│
+│ Deployment Strategy: Blue-Green / Canary
+│ Rollback: Automatic if error rate > 1% or p95 > 1s
+│
+└──────────────────────────────────────────────────────┘
+```
+
+---
+
+## 14. SCALING CALCULATIONS
+
+### **Expected Load**
+- **Day 1**: 1,000 concurrent users
+- **Month 6**: 50,000 concurrent users
+- **Year 1**: 500,000 concurrent users
+- **Year 2**: 2,000,000 concurrent users
+
+### **Server Requirements**
+```
+For 50,000 concurrent users (Year 1):
+
+API Servers:
+├─ Requests/sec: 50,000 * 2 = 100,000 req/sec
+├─ Avg response time: 50ms
+├─ Connections per server: 1,000
+├─ Servers needed: 100,000 / 1,000 = 100 instances
+├─ Standard: 3 replicas minimum, 20 max
+└─ Recommendation: t3.xlarge (4 CPU, 16GB RAM)
+
+Database (MongoDB):
+├─ Storage needed: 50TB (metadata + user data)
+├─ Documents: ~50M users × 10 collections
+├─ Shards: 10 (even distribution)
+├─ Nodes: 30 (3 per shard + 1 config server)
+└─ Recommendation: r5.4xlarge (16 CPU, 128GB RAM)
+
+Cache (Redis):
+├─ Memory needed: 500GB (10% hit rate)
+├─ Nodes: 10 (data) + 3 (sentinel)
+└─ Recommendation: cache.r6g.xlarge (4 CPU, 32GB RAM)
+
+Message Queue:
+├─ Throughput: 50,000 messages/sec
+├─ Nodes: 5 (cluster)
+└─ Recommendation: i3en.3xlarge (12 CPU, 96GB RAM)
+
+Storage:
+├─ S3 cost: ~$2,300/month (1PB at $0.023/GB)
+├─ CDN cost: ~$0.08 per GB transferred
+└─ Bandwidth: ~500 Gbps during peak
+```
+
+---
+
+## 15. COST OPTIMIZATION
+
+```
+┌──────────────────────────────────────────────────────┐
+│      COST OPTIMIZATION STRATEGIES                    │
+├──────────────────────────────────────────────────────┤
+│
+│ Infrastructure:
+│ ├─ Reserved instances (30% discount)
+│ ├─ Spot instances for workers (70% discount)
+│ ├─ Auto-scaling (pay only for used capacity)
+│ └─ Multi-cloud strategy (AWS + GCP)
+│
+│ Database:
+│ ├─ Compression (50% storage savings)
+│ ├─ Indexing optimization
+│ ├─ Data tiering (cold storage)
+│ └─ Query optimization
+│
+│ Bandwidth:
+│ ├─ CDN caching (reduce origin traffic 80%)
+│ ├─ Compression (gzip, brotli)
+│ ├─ Regional caching
+│ └─ DDoS protection (prevent wasted bandwidth)
+│
+│ Monitoring:
+│ ├─ Sampling logs (10%, not 100%)
+│ ├─ Metric aggregation
+│ ├─ Data retention limits
+│ └─ Alert optimization
+│
+└──────────────────────────────────────────────────────┘
+```
+
+---
+
+## Key Architecture Decisions
+
+| Component | Choice | Reason |
+|-----------|--------|--------|
+| **Movies Storage** | CDN + S3 | Low latency, global distribution, cost efficient |
+| **Cache** | Redis Cluster | High performance, scalability, pub/sub support |
+| **Database** | MongoDB Sharded | Flexible schema, horizontal scaling, document model |
+| **Message Queue** | RabbitMQ | Reliability, advanced routing, dead letter support |
+| **Async Jobs** | BullMQ | Redis-backed, visual dashboard, retry logic |
+| **API Framework** | Express.js | Node.js standard, mature, lightweight |
+| **Deployment** | Kubernetes | Container orchestration, auto-scaling, HA |
+| **Monitoring** | ELK + Prometheus | Open-source, comprehensive, cost-effective |
+
+---
+
+This architecture can scale from thousands to millions of users while maintaining:
+- ✅ Sub-second response times
+- ✅ 99.99% uptime
+- ✅ Automatic failover
+- ✅ Global content delivery
+- ✅ Efficient resource utilization

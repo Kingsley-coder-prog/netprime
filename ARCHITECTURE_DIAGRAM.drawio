@@ -1,0 +1,133 @@
+<mxfile host="app.diagrams.net" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36" version="29.6.1">
+  <diagram id="architecture" name="NetPrime Backend Architecture">
+    <mxGraphModel dx="4100" dy="1668" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="2000" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" parent="1" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=24;fontStyle=1;fillColor=#e1d5e7;strokeColor=#9673a6" value="NetPrime - Scalable Movie Streaming Backend Architecture" vertex="1">
+          <mxGeometry height="40" width="1400" y="10" as="geometry" />
+        </mxCell>
+        <mxCell id="layer1" parent="1" style="text;html=1;align=left;verticalAlign=middle;fontSize=14;fontStyle=1;fillColor=#fff2cc" value="CLIENT LAYER" vertex="1">
+          <mxGeometry height="30" width="150" x="20" y="70" as="geometry" />
+        </mxCell>
+        <mxCell id="web-client" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=11;fillColor=#b3e5fc;strokeColor=#01579b" value="Web Client (Vue.js)" vertex="1">
+          <mxGeometry height="60" width="120" x="100" y="120" as="geometry" />
+        </mxCell>
+        <mxCell id="cdn-label" parent="1" style="text;html=1;align=left;verticalAlign=middle;fontSize=14;fontStyle=1;fillColor=#fff2cc" value="CDN AND CONTENT DELIVERY" vertex="1">
+          <mxGeometry height="30" width="200" x="20" y="220" as="geometry" />
+        </mxCell>
+        <mxCell id="cdn" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#c8e6c9;strokeColor=#1b5e20;align=center" value="Global CDN Network (CloudFlare/CloudFront) - 200+ edge servers worldwide" vertex="1">
+          <mxGeometry height="80" width="200" x="100" y="270" as="geometry" />
+        </mxCell>
+        <mxCell id="s3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#ffe0b2;strokeColor=#e65100;align=center" value="AWS S3 (Origin Storage) - Movie Files, Backup" vertex="1">
+          <mxGeometry height="80" width="200" x="380" y="270" as="geometry" />
+        </mxCell>
+        <mxCell id="gateway-label" parent="1" style="text;html=1;align=left;verticalAlign=middle;fontSize=14;fontStyle=1;fillColor=#fff2cc" value="API GATEWAY and LOAD BALANCING" vertex="1">
+          <mxGeometry height="30" width="280" x="20" y="380" as="geometry" />
+        </mxCell>
+        <mxCell id="lb" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#f8bbd0;strokeColor=#880e4f;align=center" value="Load Balancer (Nginx/HAProxy) - Round-robin, SSL/TLS, Health Checks" vertex="1">
+          <mxGeometry height="80" width="220" x="150" y="430" as="geometry" />
+        </mxCell>
+        <mxCell id="api-label" parent="1" style="text;html=1;align=left;verticalAlign=middle;fontSize=14;fontStyle=1;fillColor=#fff2cc" value="API SERVER CLUSTER (Node.js + Express + CommonJS)" vertex="1">
+          <mxGeometry height="30" width="350" x="20" y="540" as="geometry" />
+        </mxCell>
+        <mxCell id="api1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#ffccbc;strokeColor=#bf360c" value="API Server 1" vertex="1">
+          <mxGeometry height="60" width="100" x="100" y="600" as="geometry" />
+        </mxCell>
+        <mxCell id="api2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#ffccbc;strokeColor=#bf360c" value="API Server 2" vertex="1">
+          <mxGeometry height="60" width="100" x="250" y="600" as="geometry" />
+        </mxCell>
+        <mxCell id="api3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#ffccbc;strokeColor=#bf360c" value="API Server N (100+ at scale)" vertex="1">
+          <mxGeometry height="60" width="100" x="400" y="600" as="geometry" />
+        </mxCell>
+        <mxCell id="service-label" parent="1" style="text;html=1;align=left;verticalAlign=middle;fontSize=14;fontStyle=1;fillColor=#fff2cc" value="MICROSERVICES (Node.js CommonJS)" vertex="1">
+          <mxGeometry height="30" width="280" x="20" y="700" as="geometry" />
+        </mxCell>
+        <mxCell id="auth-svc" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=9;fillColor=#d1c4e9;strokeColor=#512da8;align=center" value="Auth Service - JWT, OAuth2, MFA" vertex="1">
+          <mxGeometry height="60" width="100" x="100" y="760" as="geometry" />
+        </mxCell>
+        <mxCell id="movie-svc" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=9;fillColor=#d1c4e9;strokeColor=#512da8;align=center" value="Movie Service - CRUD, Search, Filters" vertex="1">
+          <mxGeometry height="60" width="100" x="250" y="760" as="geometry" />
+        </mxCell>
+        <mxCell id="stream-svc" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=9;fillColor=#d1c4e9;strokeColor=#512da8;align=center" value="Streaming Service - Playback, Quality" vertex="1">
+          <mxGeometry height="60" width="100" x="400" y="760" as="geometry" />
+        </mxCell>
+        <mxCell id="user-svc" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=9;fillColor=#d1c4e9;strokeColor=#512da8;align=center" value="User Service - Profiles, Watchlist" vertex="1">
+          <mxGeometry height="60" width="100" x="550" y="760" as="geometry" />
+        </mxCell>
+        <mxCell id="cache-label" parent="1" style="text;html=1;align=left;verticalAlign=middle;fontSize=14;fontStyle=1;fillColor=#fff2cc" value="CACHING and RATE LIMITING" vertex="1">
+          <mxGeometry height="30" width="280" x="20" y="860" as="geometry" />
+        </mxCell>
+        <mxCell id="redis" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#f0f4c3;strokeColor=#827717;align=center" value="Redis Cluster (3-10 nodes) - Sessions, Rate Limiting, Cache (80%+ hit rate), Pub/Sub" vertex="1">
+          <mxGeometry height="80" width="220" x="150" y="920" as="geometry" />
+        </mxCell>
+        <mxCell id="queue-label" parent="1" style="text;html=1;align=left;verticalAlign=middle;fontSize=14;fontStyle=1;fillColor=#fff2cc" value="MESSAGE QUEUE and WORKERS" vertex="1">
+          <mxGeometry height="30" width="300" x="20" y="1030" as="geometry" />
+        </mxCell>
+        <mxCell id="rabbitmq" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#ffccbc;strokeColor=#bf360c;align=center" value="RabbitMQ Message Broker - Video, Notification, Analytics Queues" vertex="1">
+          <mxGeometry height="70" width="220" x="150" y="1090" as="geometry" />
+        </mxCell>
+        <mxCell id="workers" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=9;fillColor=#c8e6c9;strokeColor=#1b5e20;align=center" value="Worker Pool (BullMQ) - Video transcoding (FFmpeg), Thumbnails, Email/Push notifications" vertex="1">
+          <mxGeometry height="70" width="220" x="420" y="1090" as="geometry" />
+        </mxCell>
+        <mxCell id="db-label" parent="1" style="text;html=1;align=left;verticalAlign=middle;fontSize=14;fontStyle=1;fillColor=#fff2cc" value="DATABASE LAYER" vertex="1">
+          <mxGeometry height="30" width="200" x="20" y="1200" as="geometry" />
+        </mxCell>
+        <mxCell id="mongodb" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#b3e5fc;strokeColor=#01579b;align=center" value="MongoDB Sharded Cluster - 10+ shards, 3 replicas each, userId shard key, Auto-balancing" vertex="1">
+          <mxGeometry height="80" width="220" x="150" y="1260" as="geometry" />
+        </mxCell>
+        <mxCell id="monitor-label" parent="1" style="text;html=1;align=left;verticalAlign=middle;fontSize=14;fontStyle=1;fillColor=#fff2cc" value="MONITORING and OBSERVABILITY" vertex="1">
+          <mxGeometry height="30" width="300" x="20" y="1380" as="geometry" />
+        </mxCell>
+        <mxCell id="stack" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#ffccbc;strokeColor=#bf360c;align=center" value="ELK Stack (Logging) + Prometheus (Metrics) + Jaeger (Tracing) + PagerDuty (Alerting)" vertex="1">
+          <mxGeometry height="80" width="240" x="150" y="1440" as="geometry" />
+        </mxCell>
+        <mxCell id="security" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#f8bbd0;strokeColor=#880e4f;align=center" value="Security - WAF, DDoS, JWT, OAuth2, MFA, AES-256, RBAC, VPC, TLS 1.3" vertex="1">
+          <mxGeometry height="80" width="240" x="420" y="1440" as="geometry" />
+        </mxCell>
+        <mxCell id="metrics-box" parent="1" style="text;html=1;align=center;whiteSpace=wrap;rounded=1;fontSize=10;fillColor=#fff9c4;strokeColor=#f57f17;padding=5" value="KEY METRICS: 50K-2M users concurrently, 100K req/sec throughput, p95 less than 500ms, 80%+ cache hit rate, 99.99% uptime SLA" vertex="1">
+          <mxGeometry height="60" width="560" x="100" y="1570" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow1" edge="1" parent="1" source="web-client" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#666;strokeWidth=2" target="cdn">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow2" edge="1" parent="1" source="cdn" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#666;strokeWidth=2" target="lb">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow3" edge="1" parent="1" source="lb" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#666;strokeWidth=2" target="api1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow4" edge="1" parent="1" source="api1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#666;strokeWidth=2" target="auth-svc">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow5" edge="1" parent="1" source="auth-svc" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#666;strokeWidth=2" target="redis">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow6" edge="1" parent="1" source="movie-svc" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#666;strokeWidth=2" target="redis">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow7" edge="1" parent="1" source="auth-svc" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#666;strokeWidth=2" target="mongodb">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow8" edge="1" parent="1" source="movie-svc" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#666;strokeWidth=2" target="mongodb">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow9" edge="1" parent="1" source="stream-svc" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#666;strokeWidth=2" target="rabbitmq">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow10" edge="1" parent="1" source="rabbitmq" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#666;strokeWidth=2" target="workers">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow11" edge="1" parent="1" source="workers" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#666;strokeWidth=2" target="s3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow12" edge="1" parent="1" source="s3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#666;strokeWidth=2" target="cdn">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow13" edge="1" parent="1" source="api1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#666;strokeWidth=2" target="stack">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
