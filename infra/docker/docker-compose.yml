@@ -1,1 +1,152 @@
-// Spins up everything locally
+# Spins up everything locally
+
+version: '3.9'
+
+services:
+
+  # ---- Databases ----
+
+  mongodb:
+    image: mongo:7.0
+    container_name: cinemax-mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: secret
+      MONGO_INITDB_DATABASE: cinemax
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - cinemax-net
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      retries:  5
+
+  redis:
+    image: redis:7.2-alpine
+    container_name: cinemax-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    networks:
+      - cinemax-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      retries:  5
+
+  # ---- Services ----
+
+  gateway:
+    build:
+      context: ..
+      dockerfile: infra/docker/Dockerfile
+    container_name: cinemax-gateway
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      MONGO_URI: mongodb://admin:secret@mongodb:27017/cinemax?authSource=admin
+      REDIS_HOST: redis
+    env_file: ../.env
+    depends_on:
+      mongodb: { condition: service_healthy }
+      redis:   { condition: service_healthy }
+    networks:
+      - cinemax-net
+    command: node gateway/index.js
+
+  auth-service:
+    build:
+      context: ..
+      dockerfile: infra/docker/Dockerfile
+    container_name: cinemax-auth
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    env_file: ../.env
+    environment:
+      NODE_ENV: production
+      AUTH_SERVICE_PORT: 3001
+      MONGO_URI: mongodb://admin:secret@mongodb:27017/cinemax?authSource=admin
+      REDIS_HOST: redis
+    depends_on:
+      mongodb: { condition: service_healthy }
+      redis:   { condition: service_healthy }
+    networks:
+      - cinemax-net
+    command: node services/auth-service/index.js
+
+  movie-service:
+    build:
+      context: ..
+      dockerfile: infra/docker/Dockerfile
+    container_name: cinemax-movie
+    restart: unless-stopped
+    ports:
+      - "3003:3003"
+    env_file: ../.env
+    environment:
+      NODE_ENV: production
+      MOVIE_SERVICE_PORT: 3003
+      MONGO_URI: mongodb://admin:secret@mongodb:27017/cinemax?authSource=admin
+      REDIS_HOST: redis
+    depends_on:
+      - mongodb
+      - redis
+    networks:
+      - cinemax-net
+    command: node services/movie-service/index.js
+
+  upload-service:
+    build:
+      context: ..
+      dockerfile: infra/docker/Dockerfile
+    container_name: cinemax-upload
+    restart: unless-stopped
+    ports:
+      - "3005:3005"
+    env_file: ../.env
+    environment:
+      NODE_ENV: production
+      UPLOAD_SERVICE_PORT: 3005
+      MONGO_URI: mongodb://admin:secret@mongodb:27017/cinemax?authSource=admin
+      REDIS_HOST: redis
+    depends_on:
+      - mongodb
+      - redis
+    networks:
+      - cinemax-net
+    command: node services/upload-service/index.js
+
+  transcode-worker:
+    build:
+      context: ..
+      dockerfile: infra/docker/Dockerfile.worker
+    container_name: cinemax-transcoder
+    restart: unless-stopped
+    env_file: ../.env
+    environment:
+      NODE_ENV: production
+      REDIS_HOST: redis
+    depends_on:
+      - redis
+    networks:
+      - cinemax-net
+    command: node workers/transcoder/index.js
+
+volumes:
+  mongo_data:
+  redis_data:
+
+networks:
+  cinemax-net:
+    driver: bridge

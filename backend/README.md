@@ -1,275 +1,131 @@
-# NetPrime Backend API
+# 🎬 Netprime Backend
 
-A complete backend API for the NetPrime movie streaming application built with Node.js, Express, and MongoDB.
+A production-grade, scalable Node.js backend for the Cinemax movie streaming platform.
 
-## Features
+## Architecture Overview
 
-- 🔐 User Authentication (Register, Login, JWT)
-- 🎬 Movie Management (CRUD operations)
-- 🎭 Genre Management
-- 📋 Watchlist Management
-- ⏱️ Watch History Tracking
-- 👤 User Profiles
-- 🔍 Search and Filter Movies
+```
+Clients (Web / Mobile / TV)
+        │
+        ├──── CDN (Cloudflare/CloudFront) ──── S3/R2 HLS Video
+        │
+        └──── NGINX Load Balancer
+                      │
+               API Gateway :3000
+               (JWT verify, rate limit)
+                      │
+        ┌─────────────┼──────────────┐
+        │             │              │
+  Auth :3001    Movie :3003   Upload :3005
+  User :3002   Stream :3004   Notif :3006
+        │             │              │
+        └─────────────┼──────────────┘
+                      │
+          ┌───────────┼───────────┐
+          │           │           │
+       MongoDB      Redis       BullMQ
+     Replica Set   Cluster    + Workers
+```
 
-## Prerequisites
+## Stack
 
-- Node.js (v16 or higher)
-- MongoDB (local or cloud)
-- npm or yarn
+| Layer         | Technology                              |
+| ------------- | --------------------------------------- |
+| Runtime       | Node.js 20, CommonJS                    |
+| Framework     | Express.js                              |
+| Database      | MongoDB + Mongoose (Replica Set)        |
+| Cache / RL    | Redis (ioredis + rate-limiter-flexible) |
+| Queue         | BullMQ (Redis Streams)                  |
+| Object Store  | AWS S3 / Cloudflare R2                  |
+| CDN           | CloudFront / Cloudflare                 |
+| Video         | FFmpeg (HLS transcoding)                |
+| Auth          | JWT (access + refresh rotation)         |
+| Containers    | Docker + Docker Compose                 |
+| Reverse Proxy | NGINX                                   |
 
-## Installation
+## Services
 
-1. **Install dependencies:**
+| Service              | Port | Responsibility                        |
+| -------------------- | ---- | ------------------------------------- |
+| API Gateway          | 3000 | Routing, JWT verification, rate limit |
+| Auth Service         | 3001 | Register, login, tokens, sessions     |
+| User Service         | 3002 | Profiles, watchlists, subscriptions   |
+| Movie Service        | 3003 | Metadata, search, genres, ratings     |
+| Stream Service       | 3004 | Signed CDN URLs, DRM, playback        |
+| Upload Service       | 3005 | Multipart upload to S3, job dispatch  |
+| Notification Service | 3006 | Email, push notifications             |
+
+## Getting Started
+
+### Prerequisites
+- Node.js >= 18
+- MongoDB (local or Atlas)
+- Redis
+
+### 1. Install dependencies
 ```bash
+cd backend
 npm install
 ```
 
-2. **Create `.env` file:**
+### 2. Configure environment
 ```bash
 cp .env.example .env
+# Edit .env with your values
 ```
 
-3. **Configure environment variables in `.env`:**
-```
-PORT=5000
-MONGODB_URI=mongodb://localhost:27017/netprime
-JWT_SECRET=your_jwt_secret_key_here_change_in_production
-JWT_EXPIRE=7d
-NODE_ENV=development
-FRONTEND_URL=http://localhost:5173
-```
-
-## Running the Server
-
-### Development Mode (with hot reload):
+### 3. Start all services (development)
 ```bash
 npm run dev
 ```
 
-### Production Mode:
+### 4. Or use Docker Compose
 ```bash
-npm start
+docker-compose -f infra/docker/docker-compose.yml up --build
 ```
-
-### Seed Database with Sample Data:
-```bash
-npm run seed
-```
-
-The server will start on `http://localhost:5000` by default.
-
-## Swagger UI
-
-After installing dependencies, start the backend and open the Swagger UI at:
-
-```
-http://localhost:5000/api-docs
-```
-
-You can also fetch the raw OpenAPI spec at `http://localhost:5000/api-docs.json`.
 
 ## API Endpoints
 
-### Authentication Routes `/api/auth`
-- `POST /register` - Register a new user
-- `POST /login` - Login user
-- `GET /logout` - Logout user
-- `GET /me` - Get current user (protected)
+### Auth
+| Method | Path                          | Auth | Description        |
+| ------ | ----------------------------- | ---- | ------------------ |
+| POST   | /api/auth/register            | ✗    | Register new user  |
+| POST   | /api/auth/login               | ✗    | Login              |
+| POST   | /api/auth/refresh             | ✗    | Refresh tokens     |
+| POST   | /api/auth/logout              | ✓    | Logout             |
+| POST   | /api/auth/logout-all          | ✓    | Logout all devices |
+| GET    | /api/auth/me                  | ✓    | Get profile        |
+| POST   | /api/auth/forgot-password     | ✗    | Request reset link |
+| POST   | /api/auth/reset-password      | ✗    | Reset password     |
+| GET    | /api/auth/verify-email/:token | ✗    | Verify email       |
 
-### Movie Routes `/api/movies`
-- `GET /` - Get all movies (supports search, filtering, sorting)
-- `GET /:id` - Get movie by ID
-- `GET /featured` - Get featured movies
-- `GET /trending` - Get trending movies
-- `GET /popular` - Get popular movies
-- `POST /` - Create new movie
-- `PUT /:id` - Update movie
-- `DELETE /:id` - Delete movie
+## Connecting to the Frontend
 
-### Genre Routes `/api/genres`
-- `GET /` - Get all genres
-- `GET /:id` - Get genre by ID
-- `POST /` - Create new genre
-- `PUT /:id` - Update genre
-- `DELETE /:id` - Delete genre
-- `GET /search/:genreName` - Get movies by genre name
-
-### User Routes `/api/users`
-- `GET /profile` - Get user profile (protected)
-- `PUT /profile` - Update user profile (protected)
-- `POST /watchlist` - Add movie to watchlist (protected)
-- `DELETE /watchlist/:movieId` - Remove from watchlist (protected)
-- `GET /watchlist` - Get watchlist (protected)
-- `POST /watch-history` - Add to watch history (protected)
-- `GET /watch-history` - Get watch history (protected)
-- `PUT /favorite-genres` - Set favorite genres (protected)
-
-## Query Parameters
-
-### Movies Endpoint Supports:
-- `search` - Search movies by title
-- `genre` - Filter by genre
-- `trending` - Get trending movies (true/false)
-- `popular` - Get popular movies (true/false)
-- `featured` - Get featured movies (true/false)
-- `sortBy` - Sort by: `rating`, `latest`, `popular`
-
-**Example:**
+Set your frontend API base URL to:
 ```
-GET /api/movies?search=Avatar&genre=Sci-Fi&sortBy=rating
+http://localhost:3000/api   (development)
+https://yourdomain.com/api  (production)
 ```
 
-## Authentication
-
-Protected routes require a JWT token in the Authorization header:
-
-```
-Authorization: Bearer <token>
-```
-
-## Database Models
-
-### User
-```javascript
-{
-  name: String,
-  email: String (unique),
-  password: String (hashed),
-  profileImage: String,
-  watchlist: [MovieId],
-  watchHistory: [{movieId, watchedAt, progress}],
-  favoriteGenres: [String],
-  createdAt: Date,
-  updatedAt: Date
-}
-```
-
-### Movie
-```javascript
-{
-  title: String,
-  description: String,
-  imageUrl: String,
-  bannerImageUrl: String,
-  genres: [GenreId],
-  year: Number,
-  rating: Number (0-10),
-  duration: Number,
-  seasons: Number,
-  episodes: Number,
-  director: String,
-  cast: [String],
-  contentRating: String,
-  featured: Boolean,
-  trending: Boolean,
-  popular: Boolean,
-  videoUrl: String,
-  tags: [String],
-  createdAt: Date,
-  updatedAt: Date
-}
-```
-
-### Genre
-```javascript
-{
-  name: String (unique),
-  description: String,
-  imageUrl: String,
-  movies: [MovieId],
-  createdAt: Date
-}
-```
-
-## Response Format
-
-All responses follow a consistent format:
-
-### Success Response:
+All responses follow this shape:
 ```json
 {
   "success": true,
-  "message": "Operation successful",
-  "data": {}
+  "data": { ... }
 }
 ```
 
-### Error Response:
+Error responses:
 ```json
 {
   "success": false,
-  "message": "Error message"
+  "code": "VALIDATION_ERROR",
+  "message": "Human-readable message",
+  "details": [ { "field": "email", "message": "..." } ]
 }
 ```
 
-## Example Usage
-
-### Register User:
+## Running Tests
 ```bash
-curl -X POST http://localhost:5000/api/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "John Doe",
-    "email": "john@example.com",
-    "password": "password123",
-    "confirmPassword": "password123"
-  }'
+npm test
 ```
-
-### Login:
-```bash
-curl -X POST http://localhost:5000/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "john@example.com",
-    "password": "password123"
-  }'
-```
-
-### Get All Movies:
-```bash
-curl http://localhost:5000/api/movies
-```
-
-### Add to Watchlist:
-```bash
-curl -X POST http://localhost:5000/api/users/watchlist \
-  -H "Authorization: Bearer <token>" \
-  -H "Content-Type: application/json" \
-  -d '{"movieId": "movie_id_here"}'
-```
-
-## Error Handling
-
-The API includes comprehensive error handling for:
-- Validation errors
-- Authentication errors
-- Database errors
-- Not found errors
-- Server errors
-
-## CORS Configuration
-
-The backend is configured to accept requests from:
-- Frontend URL specified in `.env` (default: `http://localhost:5173`)
-- Credentials are allowed for cross-origin requests
-
-## Future Enhancements
-
-- [ ] Email verification
-- [ ] Password reset functionality
-- [ ] Admin dashboard
-- [ ] Payment integration
-- [ ] Streaming video upload
-- [ ] Comments and ratings
-- [ ] Recommendations engine
-- [ ] Social features (sharing, following)
-
-## License
-
-MIT License
-
-## Support
-
-For issues or questions, please create an issue in the repository.
