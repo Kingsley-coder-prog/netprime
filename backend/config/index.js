@@ -27,9 +27,9 @@ const config = {
   },
 
   mongo: {
-    uri: process.env.MONGO_URI || "mongodb://localhost:27017/cinemax",
+    uri: process.env.MONGO_URI || "mongodb://localhost:27017/netprime",
     testUri:
-      process.env.MONGO_URI_TEST || "mongodb://localhost:27017/cinemax_test",
+      process.env.MONGO_URI_TEST || "mongodb://localhost:27017/netprime_test",
     options: {
       // Mongoose 8+ - these are the relevant pool options
       maxPoolSize: 10,
@@ -56,9 +56,9 @@ const config = {
   s3: {
     accessKeyId: process.env.AWS_ACCESS_KEY_ID,
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-    region: process.env.AWS_REGION || "us-east-1",
-    bucketRaw: process.env.S3_BUCKET_RAW || "cinemax-raw-uploads",
-    bucketHls: process.env.S3_BUCKET_HLS || "cinemax-hls-processed",
+    region: process.env.AWS_REGION || "us-east-2",
+    bucketRaw: process.env.S3_BUCKET_RAW || "netprime-raw-uploads",
+    bucketHls: process.env.S3_BUCKET_HLS || "netprime-hls-processed",
     endpoint: process.env.S3_ENDPOINT || undefined, // Cloudflare R2
   },
 
@@ -66,7 +66,10 @@ const config = {
     baseUrl: process.env.CDN_BASE_URL || "",
     keyId: process.env.CDN_SIGNED_KEY_ID || "",
     privateKeyPath: process.env.CDN_PRIVATE_KEY_PATH || "",
+    hmacSecret: process.env.CDN_HMAC_SECRET || "",
   },
+
+  internalSecret: process.env.INTERNAL_SERVICE_SECRET || "dev_internal_secret",
 
   rateLimit: {
     windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
@@ -79,7 +82,7 @@ const config = {
     port: parseInt(process.env.SMTP_PORT) || 587,
     user: process.env.SMTP_USER || "",
     pass: process.env.SMTP_PASS || "",
-    from: process.env.EMAIL_FROM || "Cinemax <noreply@cinemax.com>",
+    from: process.env.EMAIL_FROM || "netprime <noreply@netprime.com>",
   },
 
   cors: {

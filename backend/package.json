@@ -1,7 +1,7 @@
 {
-  "name": "cinemax-backend",
+  "name": "netprime-backend",
   "version": "1.0.0",
-  "description": "Cinemax Movie Streaming Platform - Backend Monorepo",
+  "description": "NetPrime Movie Streaming Platform - Backend Monorepo",
   "main": "gateway/index.js",
   "scripts": {
     "dev:gateway": "nodemon gateway/index.js",
