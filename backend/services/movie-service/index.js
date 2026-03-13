@@ -39,7 +39,7 @@ app.get("/health", (req, res) =>
 );
 
 // Routes
-app.use("/api/movies", movieRoutes);
+app.use("/", movieRoutes);
 
 // 404
 app.use("*", (req, res) =>

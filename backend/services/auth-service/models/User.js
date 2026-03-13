@@ -3,7 +3,7 @@
 
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
-const config = require("../../../../config");
+const config = require("../../../config");
 
 const userSchema = new mongoose.Schema(
   {
@@ -100,7 +100,7 @@ const userSchema = new mongoose.Schema(
 );
 
 // ---- Indexes ----
-userSchema.index({ email: 1 });
+// userSchema.index({ email: 1 });
 userSchema.index({ "subscription.plan": 1 });
 userSchema.index({ createdAt: -1 });
 

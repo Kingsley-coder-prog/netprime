@@ -1,4 +1,3 @@
-// Joi schemas
 "use strict";
 
 const Joi = require("joi");
@@ -76,10 +75,34 @@ const createMovieSchema = Joi.object({
     .default("basic"),
 });
 
-const updateMovieSchema = createMovieSchema.fork(
-  ["title", "description", "genres", "releaseYear", "duration"],
-  (field) => field.optional(),
-);
+const updateMovieSchema = createMovieSchema
+  .fork(
+    [
+      "title",
+      "description",
+      "genres",
+      "releaseYear",
+      "duration",
+      "tagline",
+      "language",
+      "country",
+      "ageRating",
+      "director",
+      "cast",
+      "posterUrl",
+      "backdropUrl",
+      "trailerUrl",
+      "imdbId",
+      "imdbRating",
+      "isFree",
+      "requiredPlan",
+    ],
+    (field) => field.optional(),
+  )
+  .keys({
+    status: Joi.string().valid(...VALID_STATUSES),
+    isFeatured: Joi.boolean(),
+  });
 
 const updateStatusSchema = Joi.object({
   status: Joi.string()

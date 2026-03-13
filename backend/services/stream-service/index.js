@@ -39,7 +39,7 @@ app.get("/health", (req, res) =>
 );
 
 // ---- Routes ----
-app.use("/api/stream", streamRoutes);
+app.use("/", streamRoutes);
 
 // ---- 404 ----
 app.use("*", (req, res) =>

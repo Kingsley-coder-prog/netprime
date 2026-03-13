@@ -35,7 +35,7 @@ app.get("/health", (req, res) =>
   }),
 );
 
-app.use("/api/notifications", notificationRoutes);
+app.use("/", notificationRoutes);
 
 app.use("*", (req, res) =>
   res

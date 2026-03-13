@@ -33,7 +33,7 @@ app.get("/health", (req, res) =>
   res.json({ service: "user-service", status: "ok", uptime: process.uptime() }),
 );
 
-app.use("/api/users", userRoutes);
+app.use("/", userRoutes);
 
 app.use("*", (req, res) =>
   res

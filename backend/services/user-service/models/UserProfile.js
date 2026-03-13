@@ -107,7 +107,7 @@ const userProfileSchema = new mongoose.Schema(
 );
 
 // ---- Indexes ----
-userProfileSchema.index({ email: 1 });
+// userProfileSchema.index({ email: 1 });
 userProfileSchema.index({ "subscription.plan": 1 });
 userProfileSchema.index({ "subscription.expiresAt": 1 });
 userProfileSchema.index({ createdAt: -1 });

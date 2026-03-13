@@ -1,4 +1,3 @@
-// Redis client (ioredis singleton)
 "use strict";
 
 const Redis = require("ioredis");
@@ -12,15 +11,24 @@ let client = null;
 const createRedisClient = () => {
   if (client) return client;
 
-  client = new Redis({
+  const isLocalRedis = ["localhost", "127.0.0.1"].includes(config.redis.host);
+  const useTLS = !isLocalRedis && !!config.redis.password;
+
+  const redisOptions = {
     host: config.redis.host,
     port: config.redis.port,
     password: config.redis.password,
     retryStrategy: config.redis.retryStrategy,
-    enableOfflineQueue: true, // Queue commands while reconnecting
+    enableOfflineQueue: true,
     maxRetriesPerRequest: 3,
     lazyConnect: false,
-  });
+  };
+
+  if (useTLS) {
+    redisOptions.tls = {};
+  }
+
+  client = new Redis(redisOptions);
 
   client.on("connect", () => logger.info("Redis connected."));
   client.on("ready", () => logger.info("Redis ready."));
@@ -33,18 +41,11 @@ const createRedisClient = () => {
   return client;
 };
 
-/**
- * Returns the singleton Redis client.
- * Creates it on first call.
- */
 const getRedisClient = () => {
   if (!client) createRedisClient();
   return client;
 };
 
-/**
- * Graceful shutdown.
- */
 const disconnectRedis = async () => {
   if (client) {
     await client.quit();

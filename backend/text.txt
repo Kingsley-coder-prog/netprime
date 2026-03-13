@@ -1,0 +1,151 @@
+shared/
+  config/index.js              ← reads .env, exports typed config
+  shared/db/index.js           ← MongoDB connection manager
+  shared/redis/index.js        ← Redis client singleton
+  shared/redis/rateLimiter.js  ← Redis rate limiter middleware
+  shared/logger/index.js       ← Winston logger factory
+  shared/errors/index.js       ← Custom error classes
+  shared/errors/errorHandler.js← Global Express error handler
+
+gateway/
+  index.js                     ← Reverse proxy entry point (port 3000)
+  middleware/gatewayAuth.js    ← JWT verification at gateway level
+
+services/auth-service/         ← 8 files, fully written
+  index.js                     ← Express app bootstrap + graceful shutdown
+  models/User.js               ← Mongoose schema, bcrypt hooks (130 lines)
+  controllers/auth.controller.js← All auth logic: register/login/refresh/logout/reset (299 lines)
+  routes/auth.routes.js        ← 9 route definitions
+  middleware/authenticate.js   ← JWT verify + role authorize middleware
+  validators/auth.validator.js ← Joi validation schemas
+  utils/jwt.js                 ← Sign/verify tokens, rotation helpers
+  tests/auth.test.js           ← Integration tests
+
+services/movie-service/        ← 7 files, fully written
+  index.js
+  models/Movie.js              ← Full schema with slugs, indexes, virtuals
+  models/Review.js             ← Reviews with auto rating recalculation
+  controllers/movie.controller.js ← CRUD + search + Redis cache + reviews
+  routes/movie.routes.js       ← 14 endpoints
+  validators/movie.validator.js
+  tests/movie.test.js
+
+infra/
+  docker/Dockerfile
+  docker/Dockerfile.worker     ← Includes FFmpeg
+  docker/docker-compose.yml
+  nginx/nginx.conf
+
+.env.example
+package.json
+README.md
+
+
+// HOW TO GET THE VARIABLES
+node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
+```
+```
+JWT_ACCESS_SECRET=<first output>
+JWT_REFRESH_SECRET=<second output>
+```
+Never reuse these or share them. The expiry values (`15m`, `7d`) are fine as-is.
+
+---
+
+**AWS S3 / CLOUDFLARE R2**
+
+**Option A — AWS S3:**
+1. Go to [aws.amazon.com](https://aws.amazon.com) → IAM → Create a user
+2. Attach the `AmazonS3FullAccess` policy (or a scoped policy for just your buckets)
+3. Create access keys → copy `Access Key ID` and `Secret Access Key`
+4. Go to S3 → Create two buckets:
+   - `netprime-raw-uploads` (private)
+   - `netprime-hls-processed` (private, CDN will serve from here)
+5. Set your region (e.g. `us-east-2`)
+6. Leave `S3_ENDPOINT` blank
+
+**Option B — Cloudflare R2 (recommended — no egress fees):**
+1. Go to [dash.cloudflare.com](https://dash.cloudflare.com) → R2
+2. Create two buckets: `netprime-raw-uploads` and `netprime-hls-processed`
+3. Go to **R2 → Manage R2 API Tokens** → Create token with Object Read & Write
+4. Copy the Access Key ID and Secret Access Key
+5. Your endpoint is: `https://<your_account_id>.r2.cloudflarestorage.com`
+6. Set `AWS_REGION=auto`
+
+---
+
+**CDN — skip for local dev**
+
+Leave all CDN variables blank while testing locally. Your stream service will fall back to direct S3 URLs which is fine for Postman testing. You only need this configured for production.
+
+When you're ready for production:
+- **CloudFront**: AWS Console → CloudFront → Create distribution pointing to your HLS bucket. Generate a key pair under **CloudFront → Public keys**.
+- **Cloudflare**: Add your domain to Cloudflare, point it at your R2 bucket, generate an HMAC secret with `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`.
+
+---
+
+**EMAIL (SMTP)**
+
+**Option A — Gmail (quickest for dev):**
+1. Go to [myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords)
+2. Select **Mail** → your device → Generate
+3. Copy the 16-character app password (not your normal Gmail password)
+```
+SMTP_USER=youremail@gmail.com
+SMTP_PASS=xxxx xxxx xxxx xxxx    ← the 16-char app password
+```
+
+**Option B — Resend (cleanest free tier for dev):**
+1. Go to [resend.com](https://resend.com) → get an API key
+```
+SMTP_HOST=smtp.resend.com
+SMTP_PORT=465
+SMTP_USER=resend
+SMTP_PASS=re_xxxxxxxxxxxx    ← your Resend API key
+```
+
+**Dev tip:** Leave `SMTP_USER` blank entirely and emails just get logged to the console — useful while testing auth before you have SMTP set up.
+
+---
+
+**CORS — update to match your frontend**
+```
+CORS_ORIGIN=http://localhost:5500,http://localhost:3000
+```
+If your frontend runs on a different port (like Vite's default `5173`), add it:
+```
+CORS_ORIGIN=http://localhost:5173,http://localhost:5500
+
+// WORKING IN POSTMAN
+
+Import both JSON files into Postman
+Select the Cinemax Local environment from the top-right dropdown
+Update internalSecret in the environment to match your .env
+
+Health Checks        → confirm all 7 services are running
+Auth / Register      → creates user, auto-saves accessToken
+Auth / Login (Admin) → auto-saves adminToken
+Movies / Create Movie → auto-saves movieId + movieSlug
+Users / Get My Profile
+Upload / Step 1-3    → presigned URL flow
+Stream / Get Stream URLs
+
+// STARTING SERVICES
+# Start everything (all 7 services) with hot reload
+npm run dev
+
+# Start only the 4 core services — best for initial Postman testing
+npm run dev:core        # gateway + auth + user + movie
+
+# Start a single service on its own
+npm run dev:auth
+npm run dev:movie
+# etc.
+
+# Start workers separately (only needed when testing upload/transcoding)
+npm run dev:workers
+
+// Running tests
+npm test                  # all services
+npm run test:auth         # one service at a time
+npm run test:movie

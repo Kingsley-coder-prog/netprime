@@ -44,7 +44,7 @@ app.get("/health", (req, res) =>
 );
 
 // ---- Routes ----
-app.use("/api/uploads", uploadRoutes);
+app.use("/", uploadRoutes);
 
 // ---- 404 ----
 app.use("*", (req, res) =>
