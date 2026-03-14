@@ -1,6 +1,7 @@
 "use strict";
 
 const crypto = require("crypto");
+const axios = require("axios");
 const User = require("../models/User");
 const {
   createTokenPair,
@@ -67,6 +68,18 @@ const register = async (req, res, next) => {
     await user.save({ validateBeforeSave: false });
 
     logger.info(`New user registered: ${email}`);
+
+    // Provision user profile in user-service (fire and forget)
+    axios
+      .post(`${process.env.USER_SERVICE_URL}/provision`, {
+        userId: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      })
+      .catch((err) =>
+        logger.error("Failed to provision user profile:", err.message),
+      );
 
     const tokens = createTokenPair(user);
 
