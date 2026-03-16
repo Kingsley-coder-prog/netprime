@@ -12,6 +12,8 @@ const { createServiceLogger } = require("../shared/logger");
 const { globalLimiter } = require("../shared/redis/rateLimiter");
 const errorHandler = require("../shared/errors/errorHandler");
 const { authenticate } = require("./middleware/gatewayAuth");
+const swaggerUi = require("swagger-ui-express");
+const swaggerSpec = require("../swagger");
 
 const logger = createServiceLogger("gateway");
 const app = express();
@@ -36,6 +38,29 @@ app.use(
 
 // ---- Global rate limit ----
 app.use(globalLimiter);
+
+// ---- Swagger UI ----
+app.use(
+  "/api-docs",
+  swaggerUi.serve,
+  swaggerUi.setup(swaggerSpec, {
+    customSiteTitle: "Netprime API Docs",
+    customCss:
+      ".swagger-ui .topbar { background-color: #0f0f1a; } .swagger-ui .topbar .download-url-wrapper { display: none; }",
+    swaggerOptions: {
+      persistAuthorization: true,
+      displayRequestDuration: true,
+      filter: true,
+      tryItOutEnabled: true,
+    },
+  }),
+);
+
+// Expose raw spec as JSON
+app.get("/api-docs.json", (req, res) => {
+  res.setHeader("Content-Type", "application/json");
+  res.send(swaggerSpec);
+});
 
 // ---- Health ----
 app.get("/health", (req, res) => {
