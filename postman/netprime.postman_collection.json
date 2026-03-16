@@ -1,0 +1,813 @@
+{
+  "info": {
+    "name": "Cinemax API",
+    "description": "Complete Cinemax backend API collection.\n\n**Setup:**\n1. Import this collection\n2. Import `cinemax.postman_environment.json`\n3. Select the `Cinemax Local` environment\n4. Run `Auth / Register` then `Auth / Login` — tokens are saved automatically\n5. All subsequent requests use the saved token\n\n**Order to test:**\nAuth → User → Movie (admin) → Upload → Stream",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [],
+  "item": [
+    {
+      "name": "🔐 Auth",
+      "item": [
+        {
+          "name": "Register",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const d = pm.response.json().data;",
+                  "  pm.environment.set('accessToken', d.accessToken);",
+                  "  pm.environment.set('userId', d.user._id);",
+                  "  pm.test('Register successful', () => pm.expect(pm.response.code).to.eql(201));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/auth/register",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Test User\",\n  \"email\": \"test@cinemax.com\",\n  \"password\": \"Password123!\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const d = pm.response.json().data;",
+                  "  pm.environment.set('accessToken', d.accessToken);",
+                  "  pm.environment.set('userId', d.user._id);",
+                  "  pm.test('Login successful', () => pm.expect(pm.response.code).to.eql(200));",
+                  "  pm.test('Access token present', () => pm.expect(d.accessToken).to.be.a('string'));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test@cinemax.com\",\n  \"password\": \"Password123!\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Login (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const d = pm.response.json().data;",
+                  "  pm.environment.set('adminToken', d.accessToken);",
+                  "  pm.environment.set('adminId', d.user._id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@cinemax.com\",\n  \"password\": \"AdminPass123!\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Me",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/auth/me"
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  pm.environment.set('accessToken', pm.response.json().data.accessToken);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/api/auth/refresh"
+          }
+        },
+        {
+          "name": "Forgot Password",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/auth/forgot-password",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test@cinemax.com\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Reset Password",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/auth/reset-password",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"{{resetToken}}\",\n  \"password\": \"NewPassword123!\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/auth/logout"
+          }
+        },
+        {
+          "name": "Logout All Devices",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/auth/logout-all"
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "👤 Users",
+      "item": [
+        {
+          "name": "Get My Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/users/me"
+          }
+        },
+        {
+          "name": "Update My Profile",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/api/users/me",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Name\",\n  \"bio\": \"Movie enthusiast\",\n  \"country\": \"Nigeria\",\n  \"language\": \"en\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Update Preferences",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/api/users/me/preferences",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"preferredGenres\": [\"Action\", \"Sci-Fi\"],\n  \"preferredQuality\": \"1080p\",\n  \"autoplay\": true,\n  \"notifications\": {\n    \"email\": true,\n    \"push\": false\n  }\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Watchlist",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/me/watchlist?page=1&limit=20",
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Add to Watchlist",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Added to watchlist', () => pm.expect(pm.response.code).to.eql(201));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/api/users/me/watchlist",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"movieId\": \"{{movieId}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Remove from Watchlist",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/users/me/watchlist/{{movieId}}"
+          }
+        },
+        {
+          "name": "Get User Subscription",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/users/{{userId}}/subscription"
+          }
+        },
+        {
+          "name": "[ADMIN] Update Subscription",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/api/users/{{userId}}/subscription",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"plan\": \"premium\",\n  \"expiresAt\": \"2027-01-01T00:00:00Z\",\n  \"autoRenew\": true\n}"
+            }
+          }
+        },
+        {
+          "name": "[ADMIN] List All Users",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/users?page=1&limit=20",
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "[ADMIN] Deactivate User",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/api/users/{{userId}}/status",
+            "body": { "mode": "raw", "raw": "{\n  \"isActive\": false\n}" }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "🎬 Movies",
+      "item": [
+        {
+          "name": "List Movies",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/movies?page=1&limit=20",
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" },
+                { "key": "genre", "value": "", "disabled": true },
+                { "key": "search", "value": "", "disabled": true },
+                { "key": "sort", "value": "-createdAt", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Movie by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/movies/{{movieId}}"
+          }
+        },
+        {
+          "name": "Get Movie by Slug",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/movies/slug/{{movieSlug}}"
+          }
+        },
+        {
+          "name": "Search Movies",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/movies/search?q=inception",
+              "query": [{ "key": "q", "value": "inception" }]
+            }
+          }
+        },
+        {
+          "name": "Get Featured Movies",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/movies/featured"
+          }
+        },
+        {
+          "name": "Get Genres",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/movies/genres"
+          }
+        },
+        {
+          "name": "[ADMIN] Create Movie",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const movie = pm.response.json().data.movie;",
+                  "  pm.environment.set('movieId', movie._id);",
+                  "  pm.environment.set('movieSlug', movie.slug);",
+                  "  pm.test('Movie created', () => pm.expect(pm.response.code).to.eql(201));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/api/movies",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Inception\",\n  \"description\": \"A thief who steals corporate secrets through dream-sharing technology.\",\n  \"releaseYear\": 2010,\n  \"genre\": [\"Action\", \"Sci-Fi\", \"Thriller\"],\n  \"director\": \"Christopher Nolan\",\n  \"cast\": [\n    {\"name\": \"Leonardo DiCaprio\", \"character\": \"Cobb\"},\n    {\"name\": \"Tom Hardy\", \"character\": \"Eames\"}\n  ],\n  \"duration\": 148,\n  \"language\": \"English\",\n  \"country\": \"USA\",\n  \"rating\": \"PG-13\",\n  \"isFree\": false,\n  \"requiredPlan\": \"basic\",\n  \"status\": \"published\"\n}"
+            }
+          }
+        },
+        {
+          "name": "[ADMIN] Update Movie",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/api/movies/{{movieId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"isFeatured\": true,\n  \"status\": \"published\"\n}"
+            }
+          }
+        },
+        {
+          "name": "[ADMIN] Delete Movie",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/movies/{{movieId}}"
+          }
+        },
+        {
+          "name": "Add Review",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  pm.environment.set('reviewId', pm.response.json().data.review._id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/api/movies/{{movieId}}/reviews",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rating\": 9,\n  \"comment\": \"An absolute masterpiece. Mind-bending and visually stunning.\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Reviews",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/movies/{{movieId}}/reviews"
+          }
+        },
+        {
+          "name": "Delete Review",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/movies/{{movieId}}/reviews/{{reviewId}}"
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "📤 Upload",
+      "item": [
+        {
+          "name": "Step 1 — Get Presigned URL",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const d = pm.response.json().data;",
+                  "  pm.environment.set('uploadId', d.uploadId);",
+                  "  pm.environment.set('presignedUrl', d.presignedUrl);",
+                  "  pm.environment.set('s3Key', d.s3Key);",
+                  "  pm.test('Presigned URL received', () => pm.expect(d.presignedUrl).to.be.a('string'));",
+                  "  console.log('Next: PUT your video file to: ' + d.presignedUrl);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/api/uploads/presigned-url",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fileName\": \"my-movie.mp4\",\n  \"mimeType\": \"video/mp4\",\n  \"sizeBytes\": 524288000,\n  \"movieId\": \"{{movieId}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Step 2 — PUT File to S3 (external)",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "video/mp4" }],
+            "url": "{{presignedUrl}}",
+            "body": { "mode": "file", "file": { "src": "" } },
+            "description": "Use the presignedUrl from Step 1. Select your video file as the body (binary). This goes directly to S3 — not through your server."
+          }
+        },
+        {
+          "name": "Step 3 — Confirm Upload",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Upload confirmed and queued', () => {",
+                  "  pm.expect(pm.response.code).to.eql(200);",
+                  "  pm.expect(pm.response.json().data.status).to.eql('queued');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/api/uploads/confirm",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"uploadId\": \"{{uploadId}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Poll Upload Status",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/uploads/{{uploadId}}/status"
+          }
+        },
+        {
+          "name": "List Uploads",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/uploads?page=1&limit=10",
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" },
+                { "key": "status", "value": "", "disabled": true }
+              ]
+            }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "📺 Stream",
+      "item": [
+        {
+          "name": "Get Stream URLs",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const d = pm.response.json().data;",
+                  "  pm.environment.set('sessionToken', d.session.sessionToken);",
+                  "  pm.test('Stream URLs returned', () => pm.expect(d.streams.length).to.be.above(0));",
+                  "  pm.test('Resume position set', () => pm.expect(d.session).to.have.property('progressSeconds'));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/stream/{{movieId}}?quality=auto",
+              "query": [{ "key": "quality", "value": "auto" }]
+            }
+          }
+        },
+        {
+          "name": "Get Stream URLs (720p only)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/stream/{{movieId}}?quality=720p",
+              "query": [{ "key": "quality", "value": "720p" }]
+            }
+          }
+        },
+        {
+          "name": "Save Watch Progress",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/api/stream/{{movieId}}/progress",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"progressSeconds\": 600,\n  \"durationSeconds\": 8880,\n  \"quality\": \"720p\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Watch Progress",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/stream/{{movieId}}/progress"
+          }
+        },
+        {
+          "name": "Get Watch History",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/stream/history?page=1&limit=20",
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Remove from History",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/stream/history/{{movieId}}"
+          }
+        },
+        {
+          "name": "[ADMIN] Stream Analytics",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/stream/admin/analytics"
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "🔔 Notifications (internal)",
+      "description": "These endpoints are internal — called by other services, not clients.\nThey require the x-internal-secret header.",
+      "item": [
+        {
+          "name": "Send Welcome Email",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "x-internal-secret", "value": "{{internalSecret}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{notificationUrl}}/api/notifications/email/welcome",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Test User\",\n  \"email\": \"test@cinemax.com\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Send Verify Email",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "x-internal-secret", "value": "{{internalSecret}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{notificationUrl}}/api/notifications/email/verify",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Test User\",\n  \"email\": \"test@cinemax.com\",\n  \"token\": \"sample-verify-token-abc123\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Send Password Reset Email",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "x-internal-secret", "value": "{{internalSecret}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{notificationUrl}}/api/notifications/email/password-reset",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Test User\",\n  \"email\": \"test@cinemax.com\",\n  \"token\": \"sample-reset-token-xyz789\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Send Transcode Complete Email",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "x-internal-secret", "value": "{{internalSecret}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{notificationUrl}}/api/notifications/email/transcode-complete",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Admin User\",\n  \"email\": \"admin@cinemax.com\",\n  \"movieTitle\": \"Inception\",\n  \"movieId\": \"{{movieId}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Send Subscription Upgrade Email",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "x-internal-secret", "value": "{{internalSecret}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{notificationUrl}}/api/notifications/email/subscription-upgrade",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Test User\",\n  \"email\": \"test@cinemax.com\",\n  \"plan\": \"premium\",\n  \"expiresAt\": \"2027-01-01T00:00:00Z\"\n}"
+            }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "✅ Health Checks",
+      "item": [
+        {
+          "name": "Gateway",
+          "request": { "method": "GET", "url": "{{baseUrl}}/health" }
+        },
+        {
+          "name": "Auth Service",
+          "request": { "method": "GET", "url": "http://localhost:3001/health" }
+        },
+        {
+          "name": "User Service",
+          "request": { "method": "GET", "url": "http://localhost:3002/health" }
+        },
+        {
+          "name": "Movie Service",
+          "request": { "method": "GET", "url": "http://localhost:3003/health" }
+        },
+        {
+          "name": "Stream Service",
+          "request": { "method": "GET", "url": "http://localhost:3004/health" }
+        },
+        {
+          "name": "Upload Service",
+          "request": { "method": "GET", "url": "http://localhost:3005/health" }
+        },
+        {
+          "name": "Notification Service",
+          "request": { "method": "GET", "url": "http://localhost:3006/health" }
+        }
+      ]
+    }
+  ]
+}
