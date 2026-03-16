@@ -1,4 +1,3 @@
-// Joi schemas
 "use strict";
 
 const Joi = require("joi");
@@ -39,9 +38,13 @@ const presignedUrlSchema = Joi.object({
       "any.required": "sizeBytes is required",
       "number.max": "File size cannot exceed 4 GB",
     }),
-  movieId: Joi.string().hex().length(24).required().messages({
-    "any.required": "movieId is required to link this upload to a movie",
-  }),
+  movieId: Joi.string()
+    .hex()
+    .length(24)
+    .required()
+    .messages({
+      "any.required": "movieId is required to link this upload to a movie",
+    }),
 });
 
 /**
@@ -49,7 +52,9 @@ const presignedUrlSchema = Joi.object({
  * Client calls this after the presigned upload completes.
  */
 const confirmUploadSchema = Joi.object({
-  uploadId: Joi.string().hex().length(24).required(),
+  uploadId: Joi.string()
+    .guid({ version: ["uuidv4"] })
+    .required(),
 });
 
 /**

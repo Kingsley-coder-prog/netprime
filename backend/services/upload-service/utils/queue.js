@@ -15,12 +15,16 @@ let transcodeQueue = null;
 const getTranscodeQueue = () => {
   if (transcodeQueue) return transcodeQueue;
 
+  const isLocalRedis = ["localhost", "127.0.0.1"].includes(config.redis.host);
+  const connection = {
+    host: config.redis.host,
+    port: config.redis.port,
+    password: config.redis.password,
+    ...(!isLocalRedis && config.redis.password && { tls: {} }),
+  };
+
   transcodeQueue = new Queue("transcode", {
-    connection: {
-      host: config.redis.host,
-      port: config.redis.port,
-      password: config.redis.password,
-    },
+    connection,
     defaultJobOptions: {
       attempts: 3, // Retry failed jobs up to 3 times
       backoff: {

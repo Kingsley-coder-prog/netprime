@@ -43,7 +43,7 @@ const getPresignedUrl = async (req, res, next) => {
 
     // Create Upload record immediately so we can track it
     const upload = await Upload.create({
-      _id: uploadId, // Use UUID as _id for easier correlation
+      uploadId,
       uploadedBy: userId,
       movieId,
       originalName: fileName,
@@ -62,13 +62,13 @@ const getPresignedUrl = async (req, res, next) => {
     });
 
     logger.info(
-      `Presigned URL generated for user ${userId}, uploadId: ${upload._id}`,
+      `Presigned URL generated for user ${userId}, uploadId: ${upload.uploadId}`,
     );
 
     res.status(201).json({
       success: true,
       data: {
-        uploadId: upload._id,
+        uploadId: upload.uploadId,
         presignedUrl, // Client PUTs directly to this URL
         s3Key,
         expiresIn: 900, // Seconds until URL expires
@@ -95,7 +95,7 @@ const confirmUpload = async (req, res, next) => {
     const userId = req.headers["x-user-id"];
     const { uploadId } = req.body;
 
-    const upload = await Upload.findById(uploadId);
+    const upload = await Upload.findOne({ uploadId });
     if (!upload) throw new NotFoundError("Upload");
 
     // Security: users can only confirm their own uploads
@@ -131,7 +131,7 @@ const confirmUpload = async (req, res, next) => {
 
     // Dispatch transcoding job to BullMQ
     const job = await enqueueTranscodeJob({
-      uploadId: upload._id.toString(),
+      uploadId: upload.uploadId,
       s3KeyRaw: upload.s3KeyRaw,
       s3BucketRaw: upload.s3BucketRaw,
       movieId: upload.movieId?.toString(),
@@ -152,7 +152,7 @@ const confirmUpload = async (req, res, next) => {
       success: true,
       message: "Upload confirmed. Transcoding has been queued.",
       data: {
-        uploadId: upload._id,
+        uploadId: upload.uploadId,
         jobId: job.id,
         status: upload.status,
       },
@@ -176,7 +176,7 @@ const getUploadStatus = async (req, res, next) => {
     const isAdmin = req.headers["x-user-role"] === "admin";
     const { uploadId } = req.params;
 
-    const upload = await Upload.findById(uploadId);
+    const upload = await Upload.findOne({ uploadId });
     if (!upload) throw new NotFoundError("Upload");
 
     if (!isAdmin && upload.uploadedBy.toString() !== userId) {
@@ -196,7 +196,7 @@ const getUploadStatus = async (req, res, next) => {
     res.json({
       success: true,
       data: {
-        uploadId: upload._id,
+        uploadId: upload.uploadId,
         status: upload.status,
         progress: jobStatus?.progress ?? upload.progress,
         movieId: upload.movieId,
@@ -265,7 +265,7 @@ const getUploads = async (req, res, next) => {
  */
 const deleteUpload = async (req, res, next) => {
   try {
-    const upload = await Upload.findById(req.params.uploadId);
+    const upload = await Upload.findOne({ uploadId: req.params.uploadId });
     if (!upload) throw new NotFoundError("Upload");
 
     if (["processing", "completed"].includes(upload.status)) {
@@ -281,7 +281,9 @@ const deleteUpload = async (req, res, next) => {
       const { deleteObject } = require("../utils/s3");
       await deleteObject({ key: upload.s3KeyRaw, bucket: upload.s3BucketRaw });
     } catch {
-      logger.warn(`Could not delete S3 raw object for upload ${upload._id}`);
+      logger.warn(
+        `Could not delete S3 raw object for upload ${upload.uploadId}`,
+      );
     }
 
     await upload.deleteOne();
@@ -291,10 +293,30 @@ const deleteUpload = async (req, res, next) => {
   }
 };
 
+/**
+ * PATCH /:uploadId
+ * Internal only — called by transcoder worker to update upload status.
+ */
+const updateUploadStatus = async (req, res, next) => {
+  try {
+    const { uploadId } = req.params;
+    const upload = await Upload.findOne({ uploadId });
+    if (!upload) throw new NotFoundError("Upload");
+
+    Object.assign(upload, req.body);
+    await upload.save();
+
+    res.json({ success: true, data: { upload } });
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   getPresignedUrl,
   confirmUpload,
   getUploadStatus,
+  updateUploadStatus,
   getUploads,
   deleteUpload,
 };

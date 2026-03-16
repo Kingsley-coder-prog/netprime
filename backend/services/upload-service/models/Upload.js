@@ -1,10 +1,17 @@
-// Mongoose schema
 "use strict";
 
 const mongoose = require("mongoose");
 
 const uploadSchema = new mongoose.Schema(
   {
+    // UUID for correlation with S3 keys (separate from MongoDB _id)
+    uploadId: {
+      type: String,
+      required: true,
+      unique: true,
+      index: true,
+    },
+
     // ---- Ownership ----
     uploadedBy: {
       type: mongoose.Schema.Types.ObjectId,
@@ -64,7 +71,7 @@ const uploadSchema = new mongoose.Schema(
       {
         quality: {
           type: String,
-          enum: ["360p", "480p", "720p", "1080p", "4K"],
+          enum: ["240p", "360p", "480p", "720p", "1080p", "4K"],
         },
         s3KeyHls: { type: String }, // e.g. "hls/uuid/720p/index.m3u8"
         sizeBytes: { type: Number },

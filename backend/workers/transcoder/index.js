@@ -1,4 +1,3 @@
-// Pulls jobs from BullMQ, runs FFmpeg
 "use strict";
 
 const { Worker, QueueEvents } = require("bullmq");
@@ -26,7 +25,7 @@ const logger = createServiceLogger("transcoder-worker");
 const notify = async (endpoint, payload) => {
   try {
     await axios.post(
-      `${config.services.notification}/api/notifications/email/${endpoint}`,
+      `${config.services.notification}/email/${endpoint}`,
       payload,
       {
         headers: { "x-internal-secret": config.internalSecret },
@@ -45,23 +44,21 @@ const notify = async (endpoint, payload) => {
 
 const updateUploadStatus = async (uploadId, patch) => {
   try {
-    await axios.patch(
-      `${config.services.upload}/api/uploads/${uploadId}`,
-      patch,
-      {
-        headers: { "x-internal-secret": config.internalSecret },
-        timeout: 5000,
-      },
-    );
+    await axios.patch(`${config.services.upload}/internal/${uploadId}`, patch, {
+      headers: { "x-internal-secret": config.internalSecret },
+      timeout: 5000,
+    });
   } catch (err) {
-    logger.warn(`Could not update Upload ${uploadId}:`, err.message);
+    logger.warn(
+      `Could not update Upload ${uploadId}: status=${err.response?.status} msg=${err.message} code=${err.code}`,
+    );
   }
 };
 
 const updateMovieVideoFiles = async (movieId, videoFiles) => {
   try {
     await axios.patch(
-      `${config.services.movie}/api/movies/${movieId}/video-files`,
+      `${config.services.movie}/${movieId}/video-files`,
       { videoFiles },
       {
         headers: { "x-internal-secret": config.internalSecret },
@@ -69,13 +66,15 @@ const updateMovieVideoFiles = async (movieId, videoFiles) => {
       },
     );
   } catch (err) {
-    logger.warn(`Could not update Movie ${movieId} video files:`, err.message);
+    logger.warn(
+      `Could not update Movie ${movieId} video files: status=${err.response?.status} msg=${err.message} code=${err.code}`,
+    );
   }
 };
 
 const getUserForNotification = async (userId) => {
   try {
-    const res = await axios.get(`${config.services.user}/api/users/${userId}`, {
+    const res = await axios.get(`${config.services.user}/${userId}`, {
       headers: { "x-internal-secret": config.internalSecret },
       timeout: 5000,
     });
@@ -222,7 +221,7 @@ const processTranscodeJob = async (job) => {
       let movieTitle = "Your movie";
       try {
         const movieRes = await axios.get(
-          `${config.services.movie}/api/movies/${movieId}`,
+          `${config.services.movie}/${movieId}`,
           { timeout: 5000 },
         );
         movieTitle = movieRes.data.data.movie?.title || movieTitle;
@@ -281,12 +280,20 @@ const processTranscodeJob = async (job) => {
 const start = async () => {
   await connectDB(); // Needed if worker updates DB directly as fallback
 
+  const isLocalRedis = ["localhost", "127.0.0.1"].includes(config.redis.host);
+  const redisConnection = {
+    host: config.redis.host,
+    port: config.redis.port,
+    password: config.redis.password,
+    maxRetriesPerRequest: null,
+    enableReadyCheck: false,
+    connectTimeout: 10000,
+    keepAlive: 5000,
+    ...(!isLocalRedis && config.redis.password ? { tls: {} } : {}),
+  };
+
   const worker = new Worker("transcode", processTranscodeJob, {
-    connection: {
-      host: config.redis.host,
-      port: config.redis.port,
-      password: config.redis.password,
-    },
+    connection: redisConnection,
     concurrency: 2, // Process up to 2 transcoding jobs simultaneously
     limiter: {
       max: 2, // Max 2 jobs per second (FFmpeg is CPU-heavy)

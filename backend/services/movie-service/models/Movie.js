@@ -1,4 +1,3 @@
-// Mongoose schema
 "use strict";
 
 const mongoose = require("mongoose");
@@ -18,7 +17,7 @@ const videoFileSchema = new mongoose.Schema(
   {
     quality: {
       type: String,
-      enum: ["360p", "480p", "720p", "1080p", "4K"],
+      enum: ["240p", "360p", "480p", "720p", "1080p", "4K"],
       required: true,
     },
     s3Key: { type: String, required: true }, // S3 object key for HLS manifest

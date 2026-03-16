@@ -47,6 +47,21 @@ router.get("/genres", ctrl.getGenres);
 router.get("/", validate(movieQuerySchema), ctrl.getMovies);
 router.get("/:idOrSlug", ctrl.getMovie);
 
+// ---- Internal: called by transcoder worker ----
+const requireInternalSecret = (req, res, next) => {
+  if (
+    req.headers["x-internal-secret"] !== process.env.INTERNAL_SERVICE_SECRET
+  ) {
+    return res.status(403).json({
+      success: false,
+      code: "AUTHORIZATION_ERROR",
+      message: "Internal service access only",
+    });
+  }
+  next();
+};
+router.patch("/:id/video-files", requireInternalSecret, ctrl.updateVideoFiles);
+
 // ---- Admin: Movie CRUD ----
 router.post("/", requireAdmin, validate(createMovieSchema), ctrl.createMovie);
 router.patch(

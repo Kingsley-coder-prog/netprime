@@ -36,8 +36,28 @@ const requireAdmin = (req, res, next) => {
   next();
 };
 
+const requireInternalSecret = (req, res, next) => {
+  if (
+    req.headers["x-internal-secret"] !== process.env.INTERNAL_SERVICE_SECRET
+  ) {
+    return res.status(403).json({
+      success: false,
+      code: "AUTHORIZATION_ERROR",
+      message: "Internal service access only",
+    });
+  }
+  next();
+};
+
 // ---- Internal endpoint (called by auth-service, no gateway JWT check needed) ----
 router.post("/provision", ctrl.provisionUser);
+
+// ---- Internal: subscription check (called by stream-service) ----
+router.get(
+  "/:userId/subscription",
+  requireInternalSecret,
+  ctrl.getSubscription,
+);
 
 // All routes below require auth
 router.use(requireAuth);
@@ -60,8 +80,7 @@ router.post(
 );
 router.delete("/me/watchlist/:movieId", ctrl.removeFromWatchlist);
 
-// ---- Subscription (internal + admin) ----
-router.get("/:userId/subscription", ctrl.getSubscription);
+// ---- Subscription (admin update only) ----
 router.patch(
   "/:userId/subscription",
   requireAdmin,

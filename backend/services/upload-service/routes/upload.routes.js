@@ -34,6 +34,27 @@ const requireAdmin = (req, res, next) => {
   next();
 };
 
+const requireInternalSecret = (req, res, next) => {
+  if (
+    req.headers["x-internal-secret"] !== process.env.INTERNAL_SERVICE_SECRET
+  ) {
+    return res.status(403).json({
+      success: false,
+      code: "AUTHORIZATION_ERROR",
+      message: "Internal service access only",
+    });
+  }
+  next();
+};
+
+// ---- Internal: update upload status (called by transcoder worker) ----
+// Must be BEFORE requireAuth since transcoder doesn't have a user token
+router.patch(
+  "/internal/:uploadId",
+  requireInternalSecret,
+  ctrl.updateUploadStatus,
+);
+
 // Apply auth to all routes in this router
 router.use(requireAuth);
 

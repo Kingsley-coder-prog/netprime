@@ -3,7 +3,7 @@
 
 const Joi = require("joi");
 
-const VALID_QUALITIES = ["360p", "480p", "720p", "1080p", "4K", "auto"];
+const VALID_QUALITIES = ["240p", "360p", "480p", "720p", "1080p", "4K", "auto"];
 
 /**
  * Schema for requesting a stream URL.

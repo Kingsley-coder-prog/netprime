@@ -520,6 +520,29 @@ const searchMovies = async (req, res, next) => {
   }
 };
 
+/**
+ * PATCH /:id/video-files
+ * Internal only — called by transcoder worker after HLS transcoding completes.
+ */
+const updateVideoFiles = async (req, res, next) => {
+  try {
+    const movie = await Movie.findById(req.params.id);
+    if (!movie) throw new NotFoundError("Movie");
+
+    const { videoFiles } = req.body;
+    movie.videoFiles = videoFiles;
+    if (movie.status === "processing") movie.status = "published";
+    await movie.save();
+
+    await invalidateMovieCache(movie._id, movie.slug);
+    logger.info(`Video files updated for movie ${movie._id}`);
+
+    res.json({ success: true, data: { movie } });
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   getMovies,
   getFeaturedMovies,
@@ -535,4 +558,5 @@ module.exports = {
   updateReview,
   deleteReview,
   searchMovies,
+  updateVideoFiles,
 };

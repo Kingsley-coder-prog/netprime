@@ -1,4 +1,3 @@
-// Winston logger factory
 "use strict";
 
 const { createLogger, format, transports } = require("winston");
@@ -28,10 +27,12 @@ const prodFormat = combine(timestamp(), errors({ stack: true }), json());
  */
 const createServiceLogger = (serviceName) => {
   const logDir = path.resolve(config.logging.dir);
+  // Sanitize for Windows-safe filenames (colons and special chars not allowed)
+  const safeServiceName = serviceName.replace(/[:<>"\/\|?*]/g, "-");
 
   const fileTransport = new transports.DailyRotateFile({
     dirname: logDir,
-    filename: `${serviceName}-%DATE%.log`,
+    filename: `${safeServiceName}-%DATE%.log`,
     datePattern: "YYYY-MM-DD",
     zippedArchive: true,
     maxSize: "20m",
@@ -41,7 +42,7 @@ const createServiceLogger = (serviceName) => {
 
   const errorFileTransport = new transports.DailyRotateFile({
     dirname: logDir,
-    filename: `${serviceName}-error-%DATE%.log`,
+    filename: `${safeServiceName}-error-%DATE%.log`,
     datePattern: "YYYY-MM-DD",
     zippedArchive: true,
     maxSize: "20m",
@@ -59,12 +60,12 @@ const createServiceLogger = (serviceName) => {
     ],
     exceptionHandlers: [
       new transports.File({
-        filename: path.join(logDir, `${serviceName}-exceptions.log`),
+        filename: path.join(logDir, `${safeServiceName}-exceptions.log`),
       }),
     ],
     rejectionHandlers: [
       new transports.File({
-        filename: path.join(logDir, `${serviceName}-rejections.log`),
+        filename: path.join(logDir, `${safeServiceName}-rejections.log`),
       }),
     ],
   });

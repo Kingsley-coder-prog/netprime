@@ -7,6 +7,23 @@ const path = require("path");
 const fs = require("fs");
 const os = require("os");
 const axios = require("axios");
+const { execSync } = require("child_process");
+
+// Explicitly set ffmpeg/ffprobe paths
+try {
+  const ffmpegPath = execSync("where ffmpeg", { encoding: "utf8" })
+    .trim()
+    .split("\n")[0]
+    .trim();
+  const ffprobePath = execSync("where ffprobe", { encoding: "utf8" })
+    .trim()
+    .split("\n")[0]
+    .trim();
+  ffmpeg.setFfmpegPath(ffmpegPath);
+  ffmpeg.setFfprobePath(ffprobePath);
+} catch (err) {
+  console.warn("Could not auto-detect ffmpeg/ffprobe:", err.message);
+}
 
 const config = require("../../config");
 const { createServiceLogger } = require("../../shared/logger");
@@ -158,12 +175,19 @@ const processThumbnailJob = async (job) => {
 // ============================================================
 
 const start = () => {
+  const isLocalRedis = ["localhost", "127.0.0.1"].includes(config.redis.host);
+  const connection = {
+    host: config.redis.host,
+    port: config.redis.port,
+    password: config.redis.password,
+    maxRetriesPerRequest: null,
+    enableReadyCheck: false,
+    connectTimeout: 10000,
+    keepAlive: 5000,
+    ...(!isLocalRedis && config.redis.password ? { tls: {} } : {}),
+  };
   const worker = new Worker("thumbnail", processThumbnailJob, {
-    connection: {
-      host: config.redis.host,
-      port: config.redis.port,
-      password: config.redis.password,
-    },
+    connection,
     concurrency: 4, // Thumbnails are cheaper than full transcodes
   });
 

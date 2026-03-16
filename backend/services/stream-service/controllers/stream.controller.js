@@ -26,23 +26,18 @@ const logger = createServiceLogger("stream-service");
  * We call the movie-service API instead.
  */
 const fetchMovie = async (movieId) => {
-  const axios = require("axios");
-  const config = require("../../../config");
-
-  try {
-    const res = await axios.get(
-      `${config.services.movie}/api/movies/${movieId}`,
-      { timeout: 5000 },
+  // Query MongoDB directly — public movie-service endpoint strips videoFiles
+  // Stream-service needs videoFiles to build stream URLs
+  const Movie =
+    mongoose.models.Movie ||
+    mongoose.model(
+      "Movie",
+      new mongoose.Schema({}, { strict: false }),
+      "movies",
     );
-    return res.data.data.movie;
-  } catch (err) {
-    if (err.response?.status === 404) throw new NotFoundError("Movie");
-    throw new AppError(
-      "Could not reach movie service",
-      503,
-      "SERVICE_UNAVAILABLE",
-    );
-  }
+  const movie = await Movie.findById(movieId).lean();
+  if (!movie) throw new NotFoundError("Movie");
+  return movie;
 };
 
 /**
@@ -73,8 +68,11 @@ const getUserSubscription = async (userId) => {
 
   try {
     const res = await axios.get(
-      `${config.services.user}/api/users/${userId}/subscription`,
-      { timeout: 5000 },
+      `${config.services.user}/${userId}/subscription`,
+      {
+        headers: { "x-internal-secret": config.internalSecret },
+        timeout: 5000,
+      },
     );
     const sub = res.data.data.subscription;
     await redis.set(cacheKey, JSON.stringify(sub), "EX", 300); // Cache 5 min

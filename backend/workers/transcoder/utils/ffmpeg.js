@@ -4,15 +4,41 @@ const ffmpeg = require("fluent-ffmpeg");
 const path = require("path");
 const fs = require("fs");
 const os = require("os");
+const { execSync } = require("child_process");
 const { createServiceLogger } = require("../../../shared/logger");
 
 const logger = createServiceLogger("transcoder:ffmpeg");
+
+// Explicitly set ffmpeg/ffprobe paths
+try {
+  const ffmpegPath = execSync("where ffmpeg", { encoding: "utf8" })
+    .trim()
+    .split("\n")[0]
+    .trim();
+  const ffprobePath = execSync("where ffprobe", { encoding: "utf8" })
+    .trim()
+    .split("\n")[0]
+    .trim();
+  ffmpeg.setFfmpegPath(ffmpegPath);
+  ffmpeg.setFfprobePath(ffprobePath);
+  logger.info("FFmpeg path set to: " + ffmpegPath);
+  logger.info("FFprobe path set to: " + ffprobePath);
+} catch (err) {
+  logger.warn("Could not auto-detect ffmpeg/ffprobe:", err.message);
+}
 
 /**
  * Quality profiles — defines the FFmpeg output settings per quality tier.
  * Each profile produces an HLS stream (segmented .ts files + .m3u8 manifest).
  */
 const QUALITY_PROFILES = [
+  {
+    quality: "240p",
+    width: 426,
+    height: 240,
+    videoBitrate: "400k",
+    audioBitrate: "64k",
+  },
   {
     quality: "360p",
     width: 640,
