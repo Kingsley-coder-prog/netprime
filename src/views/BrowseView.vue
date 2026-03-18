@@ -281,6 +281,7 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+@reference "tailwindcss";
 .filter-select {
   @apply bg-white/5 border border-white/10 text-white/70 text-sm rounded-lg px-3 py-2 outline-none hover:border-white/20 focus:border-red-500/50 transition-all cursor-pointer;
 }

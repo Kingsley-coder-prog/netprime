@@ -594,6 +594,7 @@ onMounted(fetchMovies);
 </script>
 
 <style scoped>
+@reference "tailwindcss";
 .admin-select {
   @apply bg-white/5 border border-white/10 text-white/70 text-sm rounded-xl px-3 py-2 outline-none focus:border-red-500/50 transition-all;
 }

@@ -224,6 +224,7 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+@reference "tailwindcss";
 .setting-select {
   @apply bg-white/10 border border-white/20 text-white text-sm rounded-lg px-3 py-1.5 outline-none focus:border-red-500/50 transition-all;
 }

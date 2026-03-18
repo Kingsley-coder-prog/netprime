@@ -351,6 +351,7 @@ async function handleForgotPassword() {
 </script>
 
 <style scoped>
+@reference "tailwindcss";
 .input-field {
   @apply w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/20 outline-none focus:border-red-500/50 focus:bg-white/10 transition-all text-sm;
 }
