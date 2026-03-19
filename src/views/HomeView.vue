@@ -41,9 +41,9 @@
         </h2>
         <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
           <router-link
-            v-for="genre in genres.slice(0, 6)"
-            :key="genre"
-            :to="{ path: '/browse', query: { genre } }"
+            v-for="item in genres.slice(0, 6)"
+            :key="item"
+            :to="{ path: '/browse', query: { genre: item } }"
             class="relative overflow-hidden rounded-lg aspect-video group cursor-pointer"
           >
             <div
@@ -51,7 +51,7 @@
             >
               <span
                 class="text-white font-bold text-sm group-hover:scale-110 transition-transform"
-                >{{ genre }}</span
+                >{{ item }}</span
               >
             </div>
           </router-link>
@@ -130,7 +130,10 @@ onMounted(async () => {
     featuredMovies.value = featured;
     trendingMovies.value = trending;
     newMovies.value = newest.movies || [];
-    genres.value = genreList;
+    // API returns [{genre: "Action", count: 5}, ...] — extract just names
+    genres.value = genreList
+      .map((g) => (typeof g === "object" ? g.genre : g))
+      .filter(Boolean);
 
     // Fetch watch history for authenticated users
     if (auth.isAuthenticated) {

@@ -11,7 +11,10 @@ const config = require("../config");
 const { createServiceLogger } = require("../shared/logger");
 const { globalLimiter } = require("../shared/redis/rateLimiter");
 const errorHandler = require("../shared/errors/errorHandler");
-const { authenticate } = require("./middleware/gatewayAuth");
+const {
+  authenticate,
+  optionalAuthenticate,
+} = require("./middleware/gatewayAuth");
 const swaggerUi = require("swagger-ui-express");
 const swaggerSpec = require("../swagger");
 
@@ -153,7 +156,7 @@ app.use("/api/auth", proxy(config.services.auth));
 
 // All routes below require a valid JWT verified at the gateway level
 app.use("/api/users", authenticate, proxy(config.services.user));
-app.use("/api/movies", proxy(config.services.movie)); // Public — movie-service handles its own auth
+app.use("/api/movies", optionalAuthenticate, proxy(config.services.movie));
 app.use("/api/stream", authenticate, proxy(config.services.stream));
 app.use("/api/uploads", authenticate, proxy(config.services.upload));
 

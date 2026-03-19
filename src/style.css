@@ -5,3 +5,36 @@
   --color-netflix-light-gray: #757575;
   --color-netflix-dark-light: #1f1f1f;
 }
+
+/* Force dark background on all native select elements */
+select {
+  background-color: rgba(255, 255, 255, 0.05) !important;
+  color: rgba(255, 255, 255, 0.7) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+select option {
+  background-color: #1a1a1a !important;
+  color: #e0e0e0 !important;
+}
+
+select:focus {
+  outline: none;
+  border-color: rgba(239, 68, 68, 0.5) !important;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
