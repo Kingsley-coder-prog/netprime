@@ -275,7 +275,10 @@ watch(
 );
 
 onMounted(async () => {
-  allGenres.value = await movieService.getGenres().catch(() => []);
+  const genreData = await movieService.getGenres().catch(() => []);
+  allGenres.value = (Array.isArray(genreData) ? genreData : [])
+    .map((g) => (typeof g === "object" && g !== null ? g.genre : g))
+    .filter(Boolean);
   await fetchMovies();
 });
 </script>

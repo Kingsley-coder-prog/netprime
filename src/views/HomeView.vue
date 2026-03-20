@@ -41,19 +41,20 @@
         </h2>
         <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
           <router-link
-            v-for="item in genres.slice(0, 6)"
-            :key="item"
-            :to="{ path: '/browse', query: { genre: item } }"
-            class="relative overflow-hidden rounded-lg aspect-video group cursor-pointer"
+            v-for="genre in genres.slice(0, 6)"
+            :key="genre"
+            :to="{ path: '/browse', query: { genre } }"
+            class="relative overflow-hidden rounded-xl aspect-video group cursor-pointer bg-gradient-to-br from-zinc-800 to-zinc-900"
           >
-            <div
-              class="absolute inset-0 bg-gradient-to-br from-red-900/50 to-black flex items-center justify-center"
-            >
+            <div class="absolute inset-0 flex items-end p-3">
               <span
-                class="text-white font-bold text-sm group-hover:scale-110 transition-transform"
-                >{{ item }}</span
+                class="text-white font-bold text-sm drop-shadow-lg group-hover:scale-105 transition-transform origin-left"
+                >{{ genre }}</span
               >
             </div>
+            <div
+              class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent group-hover:from-red-900/60 transition-all duration-300"
+            />
           </router-link>
         </div>
       </section>

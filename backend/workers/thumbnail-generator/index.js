@@ -188,7 +188,10 @@ const start = () => {
   };
   const worker = new Worker("thumbnail", processThumbnailJob, {
     connection,
-    concurrency: 4, // Thumbnails are cheaper than full transcodes
+    concurrency: 2,
+    lockDuration: 120000, // 2 minute lock for thumbnails
+    lockRenewTime: 60000, // Renew every 60s
+    stalledInterval: 120000,
   });
 
   worker.on("completed", (job, result) => {

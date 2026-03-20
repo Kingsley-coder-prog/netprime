@@ -18,6 +18,10 @@ const { downloadFromS3, uploadHLSDirectory } = require("./utils/s3");
 
 const logger = createServiceLogger("transcoder-worker");
 
+// Direct DB models — bypass HTTP for critical status updates
+const Upload = require("../../services/upload-service/models/Upload");
+const Movie = require("../../services/movie-service/models/Movie");
+
 // ============================================================
 //  Helper — call notification-service
 // ============================================================
@@ -29,7 +33,7 @@ const notify = async (endpoint, payload) => {
       payload,
       {
         headers: { "x-internal-secret": config.internalSecret },
-        timeout: 5000,
+        timeout: 30000,
       },
     );
   } catch (err) {
@@ -44,31 +48,59 @@ const notify = async (endpoint, payload) => {
 
 const updateUploadStatus = async (uploadId, patch) => {
   try {
-    await axios.patch(`${config.services.upload}/internal/${uploadId}`, patch, {
-      headers: { "x-internal-secret": config.internalSecret },
-      timeout: 5000,
-    });
+    // Write directly to MongoDB — no HTTP hop, no network timeout risk
+    await Upload.findOneAndUpdate({ uploadId }, { $set: patch });
+    logger.info(`Upload ${uploadId} updated: ${JSON.stringify(patch)}`);
   } catch (err) {
-    logger.warn(
-      `Could not update Upload ${uploadId}: status=${err.response?.status} msg=${err.message} code=${err.code}`,
-    );
+    logger.warn(`Could not update Upload ${uploadId}: ${err.message}`);
+    // Fallback to HTTP if direct DB fails
+    try {
+      await axios.patch(
+        `${config.services.upload}/internal/${uploadId}`,
+        patch,
+        {
+          headers: { "x-internal-secret": config.internalSecret },
+          timeout: 30000,
+        },
+      );
+    } catch (httpErr) {
+      logger.warn(`HTTP fallback also failed: ${httpErr.message}`);
+    }
   }
 };
 
 const updateMovieVideoFiles = async (movieId, videoFiles) => {
   try {
-    await axios.patch(
-      `${config.services.movie}/${movieId}/video-files`,
-      { videoFiles },
-      {
-        headers: { "x-internal-secret": config.internalSecret },
-        timeout: 5000,
+    // Write directly to MongoDB
+    const videoFilesFormatted = videoFiles.map((vf) => ({
+      quality: vf.quality,
+      s3Key: vf.s3Key,
+      duration: vf.duration,
+    }));
+    await Movie.findByIdAndUpdate(movieId, {
+      $set: {
+        videoFiles: videoFilesFormatted,
+        status: "published",
       },
-    );
+    });
+    logger.info(`Movie ${movieId} video files updated directly in DB`);
   } catch (err) {
     logger.warn(
-      `Could not update Movie ${movieId} video files: status=${err.response?.status} msg=${err.message} code=${err.code}`,
+      `Could not update Movie ${movieId} video files: ${err.message}`,
     );
+    // Fallback to HTTP
+    try {
+      await axios.patch(
+        `${config.services.movie}/${movieId}/video-files`,
+        { videoFiles },
+        {
+          headers: { "x-internal-secret": config.internalSecret },
+          timeout: 30000,
+        },
+      );
+    } catch (httpErr) {
+      logger.warn(`HTTP fallback also failed: ${httpErr.message}`);
+    }
   }
 };
 
@@ -76,7 +108,7 @@ const getUserForNotification = async (userId) => {
   try {
     const res = await axios.get(`${config.services.user}/${userId}`, {
       headers: { "x-internal-secret": config.internalSecret },
-      timeout: 5000,
+      timeout: 30000,
     });
     return res.data.data.user;
   } catch {
@@ -193,7 +225,7 @@ const processTranscodeJob = async (job) => {
       logger.info(`${profile.quality} complete → ${manifestS3Key}`);
     }
 
-    await job.updateProgress(90);
+    await job.updateProgress(90).catch(() => {});
 
     // ---- 5. Update Movie document with all video files ----
     if (movieId) {
@@ -212,7 +244,7 @@ const processTranscodeJob = async (job) => {
       })),
     });
 
-    await job.updateProgress(95);
+    await job.updateProgress(95).catch(() => {});
 
     // ---- 7. Email the uploader ----
     const user = await getUserForNotification(userId);
@@ -222,7 +254,7 @@ const processTranscodeJob = async (job) => {
       try {
         const movieRes = await axios.get(
           `${config.services.movie}/${movieId}`,
-          { timeout: 5000 },
+          { timeout: 30000 },
         );
         movieTitle = movieRes.data.data.movie?.title || movieTitle;
       } catch {
@@ -237,7 +269,7 @@ const processTranscodeJob = async (job) => {
       });
     }
 
-    await job.updateProgress(100);
+    await job.updateProgress(100).catch(() => {});
     logger.info(`Transcode job ${job.id} completed successfully.`);
 
     return { success: true, videoFiles };
@@ -294,11 +326,11 @@ const start = async () => {
 
   const worker = new Worker("transcode", processTranscodeJob, {
     connection: redisConnection,
-    concurrency: 2, // Process up to 2 transcoding jobs simultaneously
-    limiter: {
-      max: 2, // Max 2 jobs per second (FFmpeg is CPU-heavy)
-      duration: 1000,
-    },
+    concurrency: 1, // One at a time — FFmpeg is CPU-heavy
+    lockDuration: 600000, // 10 minute lock — for very long transcodes
+    lockRenewTime: 240000, // Only renew every 4 minutes — saves Redis commands
+    stalledInterval: 300000, // Check stalled jobs every 5 mins
+    maxStalledCount: 1, // Only retry once if stalled
   });
 
   worker.on("active", (job) => {

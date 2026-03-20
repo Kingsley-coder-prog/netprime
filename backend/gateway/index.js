@@ -138,6 +138,13 @@ const proxy = (target, pathRewrite) =>
     changeOrigin: true,
     pathRewrite,
     on: {
+      proxyReq: (proxyReq, req) => {
+        // Explicitly forward user context headers injected by auth middleware
+        if (req.headers["x-user-id"])
+          proxyReq.setHeader("x-user-id", req.headers["x-user-id"]);
+        if (req.headers["x-user-role"])
+          proxyReq.setHeader("x-user-role", req.headers["x-user-role"]);
+      },
       error: (err, req, res) => {
         logger.error(`Proxy error to ${target}: ${err.message}`);
         res.status(503).json({

@@ -281,7 +281,16 @@
             <p class="text-sm text-white truncate">{{ upload.originalName }}</p>
             <p class="text-xs text-white/30">{{ upload.sizeMB }} MB</p>
           </div>
-          <div class="text-right">
+          <div class="text-right flex items-center gap-2">
+            <span
+              v-if="
+                ['processing', 'queued'].includes(upload.status) &&
+                upload.progress > 0
+              "
+              class="text-xs text-white/40"
+            >
+              {{ upload.progress }}%
+            </span>
             <span
               class="text-xs px-2 py-1 rounded-full capitalize"
               :class="{
@@ -296,6 +305,19 @@
             >
               {{ upload.status }}
             </span>
+            <button
+              v-if="
+                upload.status === 'failed' ||
+                upload.status === 'processing' ||
+                upload.status === 'pending'
+              "
+              @click="retryUpload(upload)"
+              class="text-xs px-2 py-1 rounded-full bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors flex items-center gap-1"
+              title="Retry transcoding"
+            >
+              <Icon icon="mdi:refresh" class="text-xs" />
+              Retry
+            </button>
           </div>
         </div>
         <div
@@ -429,7 +451,7 @@ function startPolling(uploadId) {
     } catch {
       // ignore poll errors
     }
-  }, 5000);
+  }, 15000); // Poll every 15s to avoid rate limiting
 }
 
 function resetForm() {
@@ -451,14 +473,28 @@ async function fetchRecentUploads() {
   }
 }
 
+async function retryUpload(upload) {
+  try {
+    await uploadService.confirmUpload(upload.uploadId);
+    toast.success("Transcoding job requeued");
+    await fetchRecentUploads();
+  } catch (err) {
+    toast.error(err.response?.data?.message || "Failed to retry");
+  }
+}
+
 onMounted(async () => {
-  const [movieData] = await Promise.all([
-    movieService
-      .getMovies({ limit: 100, sort: "newest" })
-      .catch(() => ({ movies: [] })),
-    fetchRecentUploads(),
-  ]);
-  movies.value = movieData.movies || [];
+  try {
+    const movieData = await movieService.getMovies({
+      limit: 50,
+      sort: "newest",
+    });
+    movies.value = movieData?.movies || [];
+  } catch (err) {
+    console.error("Movie fetch error:", err.response?.data || err.message);
+    toast.error("Failed to load movies — check console");
+  }
+  await fetchRecentUploads();
 });
 
 onUnmounted(() => {

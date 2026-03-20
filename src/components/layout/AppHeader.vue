@@ -223,7 +223,14 @@ const planBadgeClass = computed(() => {
 
 function isActive(to) {
   if (to === "/") return route.path === "/";
-  return route.path.startsWith(to.split("?")[0]);
+  const path = to.split("?")[0];
+  const query = to.includes("?") ? to.split("?")[1] : null;
+  if (query) {
+    // For links with query params, check both path AND query match
+    const param = query.split("=");
+    return route.path === path && route.query[param[0]] === param[1];
+  }
+  return route.path === path;
 }
 
 function toggleSearch() {

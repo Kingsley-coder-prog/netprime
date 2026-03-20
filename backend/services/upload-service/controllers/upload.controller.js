@@ -107,10 +107,23 @@ const confirmUpload = async (req, res, next) => {
       );
     }
 
-    if (upload.status !== "pending") {
+    // Allow retry for failed or stuck processing jobs by resetting to pending
+    if (["failed", "processing"].includes(upload.status)) {
+      upload.status = "pending";
+      upload.progress = 0;
+      upload.errorMessage = null;
+      upload.startedAt = null;
+      await upload.save();
+    } else if (upload.status === "completed") {
       return res.json({
         success: true,
-        message: `Upload already in status: ${upload.status}`,
+        message: "Upload already completed",
+        data: { upload },
+      });
+    } else if (upload.status === "queued") {
+      return res.json({
+        success: true,
+        message: "Upload already queued for transcoding",
         data: { upload },
       });
     }
