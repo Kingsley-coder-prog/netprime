@@ -168,6 +168,13 @@
                   >
                     <Icon icon="mdi:eye" />
                   </router-link>
+                  <button
+                    @click="openEdit(movie)"
+                    class="icon-btn"
+                    title="Edit"
+                  >
+                    <Icon icon="mdi:pencil" />
+                  </button>
                   <router-link
                     :to="`/admin/upload?movieId=${movie._id}`"
                     class="icon-btn"
@@ -448,6 +455,200 @@
         </div>
       </Transition>
     </Teleport>
+
+    <!-- Edit Movie Modal -->
+    <Teleport to="body">
+      <Transition name="modal">
+        <div
+          v-if="editTarget"
+          class="fixed inset-0 z-[999] flex items-center justify-center p-4"
+        >
+          <div
+            class="absolute inset-0 bg-black/80 backdrop-blur-sm"
+            @click="editTarget = null"
+          />
+          <div
+            class="relative bg-[#1a1a1a] border border-white/10 rounded-2xl p-6 max-w-2xl w-full shadow-2xl max-h-[90vh] overflow-y-auto"
+          >
+            <div class="flex items-center justify-between mb-6">
+              <h3 class="text-lg font-bold text-white">Edit Movie</h3>
+              <button
+                @click="editTarget = null"
+                class="text-white/40 hover:text-white transition-colors"
+              >
+                <Icon icon="mdi:close" class="text-xl" />
+              </button>
+            </div>
+
+            <div class="space-y-4">
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="form-label">Title</label>
+                  <input
+                    v-model="editForm.title"
+                    type="text"
+                    class="form-input"
+                  />
+                </div>
+                <div>
+                  <label class="form-label">Director</label>
+                  <input
+                    v-model="editForm.director"
+                    type="text"
+                    class="form-input"
+                  />
+                </div>
+              </div>
+              <div>
+                <label class="form-label">Description</label>
+                <textarea
+                  v-model="editForm.description"
+                  rows="3"
+                  class="form-input resize-none"
+                />
+              </div>
+              <div class="grid grid-cols-3 gap-4">
+                <div>
+                  <label class="form-label">Release Year</label>
+                  <input
+                    v-model.number="editForm.releaseYear"
+                    type="number"
+                    class="form-input"
+                  />
+                </div>
+                <div>
+                  <label class="form-label">Duration (mins)</label>
+                  <input
+                    v-model.number="editForm.duration"
+                    type="number"
+                    class="form-input"
+                  />
+                </div>
+                <div>
+                  <label class="form-label">Age Rating</label>
+                  <select
+                    v-model="editForm.ageRating"
+                    class="admin-select w-full"
+                  >
+                    <option
+                      v-for="r in ['G', 'PG', 'PG-13', 'R', 'NC-17', 'NR']"
+                      :key="r"
+                      :value="r"
+                    >
+                      {{ r }}
+                    </option>
+                  </select>
+                </div>
+              </div>
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="form-label">Required Plan</label>
+                  <select
+                    v-model="editForm.requiredPlan"
+                    class="admin-select w-full"
+                  >
+                    <option value="free">Free</option>
+                    <option value="basic">Basic</option>
+                    <option value="premium">Premium</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="form-label">Status</label>
+                  <select v-model="editForm.status" class="admin-select w-full">
+                    <option value="draft">Draft</option>
+                    <option value="published">Published</option>
+                    <option value="archived">Archived</option>
+                  </select>
+                </div>
+              </div>
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="form-label">Poster URL</label>
+                  <input
+                    v-model="editForm.posterUrl"
+                    type="text"
+                    placeholder="https://..."
+                    class="form-input"
+                  />
+                </div>
+                <div>
+                  <label class="form-label">Backdrop URL</label>
+                  <input
+                    v-model="editForm.backdropUrl"
+                    type="text"
+                    placeholder="https://..."
+                    class="form-input"
+                  />
+                </div>
+              </div>
+              <div>
+                <label class="form-label">Genres</label>
+                <div class="flex flex-wrap gap-2">
+                  <button
+                    v-for="genre in allGenres"
+                    :key="genre"
+                    type="button"
+                    @click="toggleEditGenre(genre)"
+                    class="px-3 py-1 rounded-full text-xs font-medium transition-all"
+                    :class="
+                      editForm.genres.includes(genre)
+                        ? 'bg-red-500/30 text-red-300 border border-red-500/50'
+                        : 'bg-white/5 text-white/50 border border-white/10 hover:border-white/30'
+                    "
+                  >
+                    {{ genre }}
+                  </button>
+                </div>
+              </div>
+              <div class="flex items-center gap-6">
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    v-model="editForm.isFeatured"
+                    class="w-4 h-4 accent-red-500"
+                  />
+                  <span class="text-sm text-white/70"
+                    >Featured (shows in hero)</span
+                  >
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    v-model="editForm.isFree"
+                    class="w-4 h-4 accent-red-500"
+                  />
+                  <span class="text-sm text-white/70">Free to watch</span>
+                </label>
+              </div>
+            </div>
+
+            <div
+              v-if="editError"
+              class="mt-4 bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-3 text-sm text-red-400"
+            >
+              {{ editError }}
+            </div>
+
+            <div class="flex gap-3 justify-end mt-6">
+              <button
+                @click="editTarget = null"
+                class="px-6 py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-xl text-sm transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                @click="saveEdit"
+                :disabled="editing"
+                class="px-6 py-2.5 bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white font-medium rounded-xl text-sm transition-all flex items-center gap-2"
+              >
+                <Icon v-if="editing" icon="mdi:loading" class="animate-spin" />
+                {{ editing ? "Saving..." : "Save Changes" }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
@@ -469,6 +670,10 @@ const deleteTarget = ref(null);
 const creating = ref(false);
 const deleting = ref(false);
 const createError = ref("");
+const editTarget = ref(null);
+const editing = ref(false);
+const editError = ref("");
+const editForm = ref({});
 
 const allGenres = [
   "Action",
@@ -511,6 +716,52 @@ function toggleNewMovieGenre(genre) {
   const idx = newMovie.value.genres.indexOf(genre);
   if (idx === -1) newMovie.value.genres.push(genre);
   else newMovie.value.genres.splice(idx, 1);
+}
+
+function openEdit(movie) {
+  editTarget.value = movie;
+  editError.value = "";
+  editForm.value = {
+    title: movie.title,
+    description: movie.description || "",
+    director: movie.director || "",
+    releaseYear: movie.releaseYear,
+    duration: movie.duration,
+    ageRating: movie.ageRating || "NR",
+    requiredPlan: movie.requiredPlan || "basic",
+    status: movie.status,
+    posterUrl: movie.posterUrl || "",
+    backdropUrl: movie.backdropUrl || "",
+    genres: [...(movie.genres || [])],
+    isFeatured: movie.isFeatured || false,
+    isFree: movie.isFree || false,
+  };
+}
+
+function toggleEditGenre(genre) {
+  const idx = editForm.value.genres.indexOf(genre);
+  if (idx === -1) editForm.value.genres.push(genre);
+  else editForm.value.genres.splice(idx, 1);
+}
+
+async function saveEdit() {
+  editError.value = "";
+  editing.value = true;
+  try {
+    const payload = { ...editForm.value };
+    if (!payload.posterUrl) delete payload.posterUrl;
+    if (!payload.backdropUrl) delete payload.backdropUrl;
+    await movieService.updateMovie(editTarget.value._id, payload);
+    // Update movie in list
+    const idx = movies.value.findIndex((m) => m._id === editTarget.value._id);
+    if (idx !== -1) movies.value[idx] = { ...movies.value[idx], ...payload };
+    editTarget.value = null;
+    toast.success("Movie updated successfully");
+  } catch (err) {
+    editError.value = err.response?.data?.message || "Failed to update movie";
+  } finally {
+    editing.value = false;
+  }
 }
 
 async function fetchMovies() {

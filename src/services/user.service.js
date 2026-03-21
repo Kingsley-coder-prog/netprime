@@ -22,7 +22,7 @@ export const userService = {
   },
 
   async addToWatchlist(movieId) {
-    const { data } = await api.post(`/api/users/me/watchlist/${movieId}`);
+    const { data } = await api.post("/api/users/me/watchlist", { movieId });
     return data;
   },
 

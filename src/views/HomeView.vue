@@ -4,7 +4,7 @@
     <HeroBanner :movie="heroMovie" :loading="loading" />
 
     <!-- Content rows -->
-    <div class="relative z-10 -mt-24 pb-20 space-y-12">
+    <div class="relative z-10 pb-20 space-y-12">
       <!-- Featured / Spotlight row -->
       <MovieRow
         v-if="featuredMovies.length"
@@ -41,20 +41,25 @@
         </h2>
         <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
           <router-link
-            v-for="genre in genres.slice(0, 6)"
-            :key="genre"
-            :to="{ path: '/browse', query: { genre } }"
-            class="relative overflow-hidden rounded-xl aspect-video group cursor-pointer bg-gradient-to-br from-zinc-800 to-zinc-900"
+            v-for="genre in genreCards.slice(0, 6)"
+            :key="genre.name"
+            :to="{ path: '/browse', query: { genre: genre.name } }"
+            class="relative overflow-hidden rounded-xl aspect-video group cursor-pointer bg-zinc-900"
           >
-            <div class="absolute inset-0 flex items-end p-3">
-              <span
-                class="text-white font-bold text-sm drop-shadow-lg group-hover:scale-105 transition-transform origin-left"
-                >{{ genre }}</span
-              >
-            </div>
-            <div
-              class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent group-hover:from-red-900/60 transition-all duration-300"
+            <img
+              v-if="genre.image"
+              :src="genre.image"
+              :alt="genre.name"
+              class="w-full h-full object-cover opacity-60 group-hover:opacity-80 group-hover:scale-105 transition-all duration-500"
             />
+            <div
+              class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent group-hover:from-red-950/80 transition-all duration-300"
+            />
+            <div class="absolute inset-0 flex items-end p-3">
+              <span class="text-white font-bold text-sm drop-shadow-lg">{{
+                genre.name
+              }}</span>
+            </div>
           </router-link>
         </div>
       </section>
@@ -101,6 +106,30 @@ import { useAuthStore } from "../stores/auth.store";
 import { movieService } from "../services/movie.service";
 import { streamService } from "../services/stream.service";
 import HeroBanner from "../components/home/HeroBanner.vue";
+import { tmdbService } from "../services/tmdb.service";
+
+// Representative movie title per genre for backdrop images
+const genreRepresentatives = {
+  Action: "Mad Max Fury Road",
+  Adventure: "Indiana Jones Raiders of the Lost Ark",
+  Animation: "Spider-Man Into the Spider-Verse",
+  Comedy: "The Grand Budapest Hotel",
+  Crime: "The Godfather",
+  Documentary: "Free Solo",
+  Drama: "The Shawshank Redemption",
+  Fantasy: "The Lord of the Rings",
+  Horror: "Get Out",
+  Mystery: "Knives Out",
+  Romance: "La La Land",
+  "Sci-Fi": "Interstellar",
+  Thriller: "Parasite",
+  War: "Dunkirk",
+  Western: "No Country for Old Men",
+  History: "Gladiator",
+  Music: "Bohemian Rhapsody",
+  Family: "Coco",
+  Sport: "Ford v Ferrari",
+};
 import MovieRow from "../components/home/MovieRow.vue";
 
 const auth = useAuthStore();
@@ -110,6 +139,7 @@ const featuredMovies = ref([]);
 const trendingMovies = ref([]);
 const newMovies = ref([]);
 const genres = ref([]);
+const genreCards = ref([]);
 const watchHistory = ref([]);
 
 const heroMovie = computed(
@@ -131,10 +161,33 @@ onMounted(async () => {
     featuredMovies.value = featured;
     trendingMovies.value = trending;
     newMovies.value = newest.movies || [];
+    console.log(
+      "[HomeView] featured:",
+      featuredMovies.value.length,
+      "trending:",
+      trendingMovies.value.length,
+      "new:",
+      newMovies.value.length
+    );
     // API returns [{genre: "Action", count: 5}, ...] — extract just names
     genres.value = genreList
       .map((g) => (typeof g === "object" ? g.genre : g))
       .filter(Boolean);
+
+    // Build genre cards with TMDB representative movie backdrops
+    genreCards.value = await Promise.all(
+      genres.value.map(async (name) => {
+        try {
+          const images = await tmdbService.getMovieImages(
+            genreRepresentatives[name] || name,
+            null
+          );
+          return { name, image: images.backdrop };
+        } catch {
+          return { name, image: null };
+        }
+      })
+    );
 
     // Fetch watch history for authenticated users
     if (auth.isAuthenticated) {
