@@ -1,11 +1,8 @@
 <template>
   <div class="min-h-screen">
-    <!-- Hero -->
     <HeroBanner :movie="heroMovie" :loading="loading" />
 
-    <!-- Content rows -->
     <div class="relative z-10 pb-20 space-y-12">
-      <!-- Featured / Spotlight row -->
       <MovieRow
         v-if="featuredMovies.length"
         title="Featured"
@@ -15,7 +12,6 @@
         :browse-query="{ sort: 'rating' }"
       />
 
-      <!-- Continue Watching (authenticated users) -->
       <MovieRow
         v-if="auth.isAuthenticated && watchHistory.length"
         title="Continue Watching"
@@ -24,7 +20,6 @@
         type="progress"
       />
 
-      <!-- Trending Now -->
       <MovieRow
         v-if="trendingMovies.length"
         title="Trending Now"
@@ -34,7 +29,6 @@
         :browse-query="{ sort: 'popular' }"
       />
 
-      <!-- Browse by Genre -->
       <section v-if="genres.length" class="px-6 md:px-12">
         <h2 class="text-lg md:text-xl font-semibold text-white mb-4">
           Browse by Genre
@@ -64,7 +58,6 @@
         </div>
       </section>
 
-      <!-- New Releases -->
       <MovieRow
         v-if="newMovies.length"
         title="New & Popular"
@@ -74,7 +67,6 @@
         :browse-query="{ sort: 'newest' }"
       />
 
-      <!-- Empty state for new users -->
       <div
         v-if="!loading && !featuredMovies.length && !trendingMovies.length"
         class="px-6 md:px-12 py-20 text-center"
@@ -105,10 +97,10 @@ import { ref, computed, onMounted } from "vue";
 import { useAuthStore } from "../stores/auth.store";
 import { movieService } from "../services/movie.service";
 import { streamService } from "../services/stream.service";
-import HeroBanner from "../components/home/HeroBanner.vue";
 import { tmdbService } from "../services/tmdb.service";
+import HeroBanner from "../components/home/HeroBanner.vue";
+import MovieRow from "../components/home/MovieRow.vue";
 
-// Representative movie title per genre for backdrop images
 const genreRepresentatives = {
   Action: "Mad Max Fury Road",
   Adventure: "Indiana Jones Raiders of the Lost Ark",
@@ -130,10 +122,8 @@ const genreRepresentatives = {
   Family: "Coco",
   Sport: "Ford v Ferrari",
 };
-import MovieRow from "../components/home/MovieRow.vue";
 
 const auth = useAuthStore();
-
 const loading = ref(true);
 const featuredMovies = ref([]);
 const trendingMovies = ref([]);
@@ -161,20 +151,11 @@ onMounted(async () => {
     featuredMovies.value = featured;
     trendingMovies.value = trending;
     newMovies.value = newest.movies || [];
-    console.log(
-      "[HomeView] featured:",
-      featuredMovies.value.length,
-      "trending:",
-      trendingMovies.value.length,
-      "new:",
-      newMovies.value.length
-    );
-    // API returns [{genre: "Action", count: 5}, ...] — extract just names
     genres.value = genreList
       .map((g) => (typeof g === "object" ? g.genre : g))
       .filter(Boolean);
 
-    // Build genre cards with TMDB representative movie backdrops
+    // Build genre cards with TMDB backdrops
     genreCards.value = await Promise.all(
       genres.value.map(async (name) => {
         try {
@@ -189,12 +170,24 @@ onMounted(async () => {
       })
     );
 
-    // Fetch watch history for authenticated users
+    // Fetch watch history — get full movie objects with progress
     if (auth.isAuthenticated) {
       const history = await streamService
         .getHistory({ limit: 10 })
         .catch(() => ({ history: [] }));
-      watchHistory.value = history.history || [];
+      const sessions = history.history || [];
+      const moviePromises = sessions.map((session) =>
+        movieService
+          .getMovie(session.movieId)
+          .then((movie) => ({
+            ...movie,
+            progress: session.percentWatched || 0,
+            progressSeconds: session.progressSeconds || 0,
+          }))
+          .catch(() => null)
+      );
+      const movieData = await Promise.all(moviePromises);
+      watchHistory.value = movieData.filter(Boolean);
     }
   } finally {
     loading.value = false;

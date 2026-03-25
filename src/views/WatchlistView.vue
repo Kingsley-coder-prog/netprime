@@ -20,16 +20,15 @@
       v-else-if="movies.length"
       class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4"
     >
-      <div v-for="item in movies" :key="item.movieId" class="relative group">
+      <div v-for="movie in movies" :key="movie._id" class="relative group">
         <MovieCard
-          :movie="{ _id: item.movieId, title: 'Movie' }"
+          :movie="movie"
           size="medium"
           class="!w-full"
-          @play="router.push(`/watch/${item.movieId}`)"
-          @info="router.push(`/movie/${item.movieId}`)"
+          @play="router.push('/watch/' + movie._id)"
         />
         <button
-          @click="removeFromWatchlist(item.movieId)"
+          @click="removeFromWatchlist(movie._id)"
           class="absolute top-2 right-2 w-7 h-7 bg-black/80 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:bg-red-600"
         >
           <Icon icon="mdi:close" class="text-white text-sm" />
@@ -49,9 +48,8 @@
       <router-link
         to="/browse"
         class="inline-flex items-center gap-2 px-6 py-3 bg-red-600 hover:bg-red-500 text-white rounded-lg font-medium transition-colors text-sm"
+        >Browse Movies</router-link
       >
-        Browse Movies
-      </router-link>
     </div>
   </div>
 </template>
@@ -60,12 +58,12 @@
 import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { userService } from "../services/user.service";
+import { movieService } from "../services/movie.service";
 import { useToast } from "../composables/useToast";
 import MovieCard from "../components/movie/MovieCard.vue";
 
 const router = useRouter();
 const toast = useToast();
-
 const movies = ref([]);
 const pagination = ref({ total: 0 });
 const loading = ref(true);
@@ -73,7 +71,7 @@ const loading = ref(true);
 async function removeFromWatchlist(movieId) {
   try {
     await userService.removeFromWatchlist(movieId);
-    movies.value = movies.value.filter((m) => m.movieId !== movieId);
+    movies.value = movies.value.filter((m) => m._id !== movieId);
     pagination.value.total = Math.max(0, pagination.value.total - 1);
     toast.info("Removed from My List");
   } catch {
@@ -84,8 +82,16 @@ async function removeFromWatchlist(movieId) {
 onMounted(async () => {
   try {
     const data = await userService.getWatchlist();
-    movies.value = data.watchlist || [];
-    pagination.value = data.pagination || { total: movies.value.length };
+    const watchlist = data.watchlist || [];
+    const moviePromises = watchlist.map((item) => {
+      const movieId = item.movieId || item._id || item;
+      return movieService.getMovie(movieId).catch(() => null);
+    });
+    const movieData = await Promise.all(moviePromises);
+    movies.value = movieData.filter(Boolean);
+    pagination.value = { total: movies.value.length };
+  } catch {
+    toast.error("Failed to load watchlist");
   } finally {
     loading.value = false;
   }

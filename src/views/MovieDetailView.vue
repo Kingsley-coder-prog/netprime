@@ -7,7 +7,7 @@
 
     <template v-else-if="movie">
       <!-- Backdrop hero -->
-      <div class="relative h-[60vh] overflow-hidden">
+      <div class="relative h-[50vh] md:h-[60vh] overflow-hidden">
         <img
           v-if="backdropSrc"
           :src="backdropSrc"
@@ -22,13 +22,13 @@
         />
 
         <!-- Content overlay -->
-        <div class="absolute inset-0 flex items-end pt-16">
+        <div class="absolute inset-0 flex items-end pt-20">
           <div
-            class="px-6 md:px-12 pb-10 flex gap-8 items-end max-w-6xl w-full"
+            class="px-4 md:px-12 pb-6 md:pb-10 flex gap-4 md:gap-8 items-end max-w-6xl w-full"
           >
-            <!-- Poster -->
+            <!-- Poster — hidden on smallest screens -->
             <div
-              class="hidden md:block w-48 flex-shrink-0 rounded-xl overflow-hidden shadow-2xl border border-white/10"
+              class="hidden sm:block w-32 md:w-48 flex-shrink-0 rounded-xl overflow-hidden shadow-2xl border border-white/10"
             >
               <img
                 v-if="posterSrc"
@@ -40,7 +40,9 @@
 
             <!-- Info -->
             <div class="flex-1 min-w-0">
-              <div class="flex items-center gap-3 mb-2 text-sm text-white/50">
+              <div
+                class="flex flex-wrap items-center gap-2 mb-2 text-xs md:text-sm text-white/50"
+              >
                 <span v-if="movie.releaseYear">{{ movie.releaseYear }}</span>
                 <span
                   v-if="movie.ageRating"
@@ -50,29 +52,30 @@
                 <span v-if="movie.durationFormatted">{{
                   movie.durationFormatted
                 }}</span>
-                <span v-if="movie.language">{{ movie.language }}</span>
               </div>
 
-              <h1 class="text-4xl md:text-5xl font-black text-white mb-3">
+              <h1
+                class="text-2xl sm:text-3xl md:text-5xl font-black text-white mb-2 md:mb-3 leading-tight"
+              >
                 {{ movie.title }}
               </h1>
 
-              <div class="flex items-center gap-3 mb-4">
+              <div class="flex flex-wrap items-center gap-2 mb-3">
                 <div
                   v-if="movie.rating?.average"
                   class="flex items-center gap-1"
                 >
-                  <Icon icon="mdi:star" class="text-yellow-400" />
-                  <span class="text-white font-semibold">{{
+                  <Icon icon="mdi:star" class="text-yellow-400 text-sm" />
+                  <span class="text-white font-semibold text-sm">{{
                     movie.rating.average.toFixed(1)
                   }}</span>
-                  <span class="text-white/40 text-sm"
-                    >({{ movie.rating.count }} reviews)</span
+                  <span class="text-white/40 text-xs"
+                    >({{ movie.rating.count }})</span
                   >
                 </div>
                 <span
                   v-if="movie.requiredPlan !== 'free'"
-                  class="text-xs px-2 py-1 rounded-full font-medium"
+                  class="text-xs px-2 py-0.5 rounded-full font-medium"
                   :class="
                     movie.requiredPlan === 'premium'
                       ? 'bg-amber-500/20 text-amber-400'
@@ -84,33 +87,33 @@
               </div>
 
               <!-- Genres -->
-              <div class="flex flex-wrap gap-2 mb-4">
+              <div class="flex flex-wrap gap-1.5 mb-4">
                 <router-link
                   v-for="genre in movie.genres"
                   :key="genre"
                   :to="{ path: '/browse', query: { genre } }"
-                  class="px-3 py-1 bg-white/10 hover:bg-white/20 border border-white/10 rounded-full text-xs text-white/70 hover:text-white transition-all"
+                  class="px-2.5 py-1 bg-white/10 hover:bg-white/20 border border-white/10 rounded-full text-xs text-white/70 hover:text-white transition-all"
                 >
                   {{ genre }}
                 </router-link>
               </div>
 
               <!-- Buttons -->
-              <div class="flex flex-wrap items-center gap-3">
+              <div class="flex flex-wrap items-center gap-2 md:gap-3">
                 <button
                   @click="handlePlay"
-                  class="flex items-center gap-2 px-8 py-3 bg-white hover:bg-white/90 text-black font-bold rounded-lg text-sm transition-all hover:scale-105"
+                  class="flex items-center gap-2 px-5 md:px-8 py-2.5 md:py-3 bg-white hover:bg-white/90 text-black font-bold rounded-lg text-sm transition-all hover:scale-105"
                 >
-                  <Icon icon="mdi:play" class="text-xl ml-0.5" />
+                  <Icon icon="mdi:play" class="text-lg md:text-xl ml-0.5" />
                   Play
                 </button>
                 <button
                   @click="handleWatchlist"
-                  class="flex items-center gap-2 px-6 py-3 bg-white/15 hover:bg-white/25 text-white font-semibold rounded-lg text-sm transition-all border border-white/20"
+                  class="flex items-center gap-2 px-4 md:px-6 py-2.5 md:py-3 bg-white/15 hover:bg-white/25 text-white font-semibold rounded-lg text-sm transition-all border border-white/20"
                 >
                   <Icon
                     :icon="inWatchlist ? 'mdi:check' : 'mdi:plus'"
-                    class="text-lg"
+                    class="text-base md:text-lg"
                   />
                   {{ inWatchlist ? "In My List" : "Add to List" }}
                 </button>
@@ -121,16 +124,14 @@
       </div>
 
       <!-- Details section -->
-      <div class="px-6 md:px-12 max-w-6xl mt-8 space-y-10">
-        <!-- Description + Cast -->
-        <div class="grid md:grid-cols-3 gap-8">
-          <div class="md:col-span-2">
-            <p class="text-white/70 text-base leading-relaxed mb-6">
+      <div class="px-4 md:px-12 max-w-6xl mt-6 md:mt-8 space-y-8 md:space-y-10">
+        <!-- Description + Cast + Status -->
+        <div class="grid md:grid-cols-3 gap-6 md:gap-8">
+          <div class="md:col-span-2 space-y-4">
+            <p class="text-white/70 text-sm md:text-base leading-relaxed">
               {{ movie.description }}
             </p>
-
-            <!-- Director & Cast -->
-            <div class="space-y-3 text-sm">
+            <div class="space-y-2 text-sm">
               <div v-if="movie.director" class="flex gap-2">
                 <span class="text-white/40 min-w-[80px]">Director:</span>
                 <span class="text-white">{{ movie.director }}</span>
@@ -149,7 +150,7 @@
           </div>
 
           <!-- Status sidebar -->
-          <div class="space-y-4">
+          <div>
             <div
               class="bg-white/5 border border-white/10 rounded-xl p-4 space-y-3"
             >
@@ -177,27 +178,18 @@
                   movie.viewCount.toLocaleString()
                 }}</span>
               </div>
-              <div
-                v-if="movie.imdbRating"
-                class="flex items-center justify-between text-sm"
-              >
-                <span class="text-white/40">IMDb</span>
-                <span class="text-yellow-400 font-semibold"
-                  >⭐ {{ movie.imdbRating }}</span
-                >
-              </div>
             </div>
           </div>
         </div>
 
         <!-- Reviews section -->
         <div>
-          <div class="flex items-center justify-between mb-6">
-            <h2 class="text-xl font-bold text-white">Reviews</h2>
+          <div class="flex items-center justify-between mb-4 md:mb-6">
+            <h2 class="text-lg md:text-xl font-bold text-white">Reviews</h2>
             <button
               v-if="auth.isAuthenticated && !userReview"
               @click="showReviewForm = !showReviewForm"
-              class="flex items-center gap-2 text-sm text-red-400 hover:text-red-300 transition-colors"
+              class="flex items-center gap-1.5 text-sm text-red-400 hover:text-red-300 transition-colors"
             >
               <Icon icon="mdi:plus" />
               Write a Review
@@ -209,11 +201,11 @@
             <form
               v-if="showReviewForm"
               @submit.prevent="submitReview"
-              class="bg-white/5 border border-white/10 rounded-xl p-6 mb-6 space-y-4"
+              class="bg-white/5 border border-white/10 rounded-xl p-4 md:p-6 mb-6 space-y-4"
             >
               <div>
                 <label class="block text-sm text-white/50 mb-2">Rating</label>
-                <div class="flex gap-2">
+                <div class="flex flex-wrap gap-1.5 md:gap-2">
                   <button
                     v-for="n in 10"
                     :key="n"
@@ -276,12 +268,12 @@
             <div
               v-for="review in reviews"
               :key="review._id"
-              class="bg-white/5 border border-white/10 rounded-xl p-5"
+              class="bg-white/5 border border-white/10 rounded-xl p-4 md:p-5"
             >
               <div class="flex items-start justify-between mb-3">
                 <div class="flex items-center gap-3">
                   <div
-                    class="w-8 h-8 rounded-full bg-red-600/50 flex items-center justify-center text-sm font-bold"
+                    class="w-8 h-8 rounded-full bg-red-600/50 flex items-center justify-center text-sm font-bold flex-shrink-0"
                   >
                     {{ review.user?.name?.[0] || "U" }}
                   </div>
@@ -295,15 +287,18 @@
                   </div>
                 </div>
                 <div
-                  class="flex items-center gap-1 bg-yellow-500/20 px-2 py-1 rounded-lg"
+                  class="flex items-center gap-1 bg-yellow-500/20 px-2 py-1 rounded-lg flex-shrink-0"
                 >
-                  <Icon icon="mdi:star" class="text-yellow-400 text-sm" />
-                  <span class="text-yellow-400 text-sm font-semibold"
+                  <Icon icon="mdi:star" class="text-yellow-400 text-xs" />
+                  <span class="text-yellow-400 text-xs font-semibold"
                     >{{ review.rating }}/10</span
                   >
                 </div>
               </div>
-              <p v-if="review.title" class="text-white font-medium mb-1">
+              <p
+                v-if="review.title"
+                class="text-white font-medium text-sm mb-1"
+              >
                 {{ review.title }}
               </p>
               <p v-if="review.body" class="text-white/60 text-sm">
@@ -311,7 +306,7 @@
               </p>
             </div>
           </div>
-          <div v-else class="text-center py-10 text-white/30 text-sm">
+          <div v-else class="text-center py-8 text-white/30 text-sm">
             No reviews yet. Be the first to review this movie.
           </div>
         </div>
@@ -356,7 +351,6 @@ const inWatchlist = ref(false);
 const showReviewForm = ref(false);
 const reviewSubmitting = ref(false);
 const tmdbImages = ref({ poster: null, backdrop: null });
-
 const reviewForm = ref({ rating: 0, title: "", body: "" });
 
 const userReview = computed(() =>
@@ -421,7 +415,6 @@ onMounted(async () => {
     movie.value = movieData;
     reviews.value = reviewData.reviews || [];
 
-    // Fetch TMDB images
     if (movie.value && (!movie.value.posterUrl || !movie.value.backdropUrl)) {
       tmdbImages.value = await tmdbService.getMovieImages(
         movie.value.title,

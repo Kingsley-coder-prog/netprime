@@ -1,20 +1,26 @@
 <template>
-  <div class="min-h-screen pt-24 pb-20 px-6 md:px-12 max-w-4xl mx-auto">
-    <h1 class="text-3xl font-black text-white mb-8">My Profile</h1>
+  <div class="min-h-screen pt-20 pb-20 px-4 md:px-12 max-w-4xl mx-auto">
+    <h1 class="text-2xl md:text-3xl font-black text-white mb-6 md:mb-8">
+      My Profile
+    </h1>
 
-    <div class="grid md:grid-cols-3 gap-8">
+    <div class="grid md:grid-cols-3 gap-6 md:gap-8">
       <!-- Avatar & subscription card -->
       <div class="space-y-4">
         <div
           class="bg-white/5 border border-white/10 rounded-2xl p-6 text-center"
         >
           <div
-            class="w-20 h-20 rounded-full bg-red-600 flex items-center justify-center text-3xl font-black mx-auto mb-4"
+            class="w-16 h-16 md:w-20 md:h-20 rounded-full bg-red-600 flex items-center justify-center text-2xl md:text-3xl font-black mx-auto mb-4"
           >
             {{ auth.user?.name?.[0]?.toUpperCase() }}
           </div>
-          <h2 class="text-lg font-bold text-white">{{ auth.user?.name }}</h2>
-          <p class="text-white/40 text-sm mb-4">{{ auth.user?.email }}</p>
+          <h2 class="text-base md:text-lg font-bold text-white">
+            {{ auth.user?.name }}
+          </h2>
+          <p class="text-white/40 text-sm mb-4 break-all">
+            {{ auth.user?.email }}
+          </p>
           <span
             class="inline-block px-3 py-1 rounded-full text-xs font-semibold"
             :class="{
@@ -79,10 +85,12 @@
 
       <!-- Edit profile form -->
       <div class="md:col-span-2">
-        <div class="bg-white/5 border border-white/10 rounded-2xl p-6">
-          <h3 class="text-lg font-semibold text-white mb-6">Edit Profile</h3>
+        <div class="bg-white/5 border border-white/10 rounded-2xl p-5 md:p-6">
+          <h3 class="text-base md:text-lg font-semibold text-white mb-5">
+            Edit Profile
+          </h3>
 
-          <form @submit.prevent="saveProfile" class="space-y-5">
+          <form @submit.prevent="saveProfile" class="space-y-4 md:space-y-5">
             <div class="grid sm:grid-cols-2 gap-4">
               <div>
                 <label
@@ -154,7 +162,7 @@
               <button
                 type="submit"
                 :disabled="saving"
-                class="px-8 py-2.5 bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white font-semibold rounded-xl text-sm transition-all"
+                class="w-full sm:w-auto px-8 py-2.5 bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white font-semibold rounded-xl text-sm transition-all"
               >
                 {{ saving ? "Saving..." : "Save Changes" }}
               </button>
@@ -163,9 +171,13 @@
         </div>
 
         <!-- Watch history preview -->
-        <div class="bg-white/5 border border-white/10 rounded-2xl p-6 mt-6">
+        <div
+          class="bg-white/5 border border-white/10 rounded-2xl p-5 md:p-6 mt-4 md:mt-6"
+        >
           <div class="flex items-center justify-between mb-4">
-            <h3 class="text-lg font-semibold text-white">Watch History</h3>
+            <h3 class="text-base md:text-lg font-semibold text-white">
+              Watch History
+            </h3>
             <router-link
               to="/browse"
               class="text-sm text-red-400 hover:text-red-300"
@@ -179,9 +191,9 @@
               class="flex items-center gap-3"
             >
               <div
-                class="w-12 h-12 rounded-lg bg-zinc-800 flex-shrink-0 overflow-hidden"
+                class="w-10 h-10 md:w-12 md:h-12 rounded-lg bg-zinc-800 flex-shrink-0 overflow-hidden flex items-center justify-center"
               >
-                <Icon icon="mdi:film" class="w-full h-full p-3 text-zinc-600" />
+                <Icon icon="mdi:film" class="text-zinc-600 text-xl" />
               </div>
               <div class="flex-1 min-w-0">
                 <p class="text-sm text-white truncate">
@@ -194,7 +206,7 @@
                   />
                 </div>
               </div>
-              <span class="text-xs text-white/30"
+              <span class="text-xs text-white/30 flex-shrink-0"
                 >{{ item.percentWatched || 0 }}%</span
               >
             </div>
@@ -252,7 +264,6 @@ onMounted(async () => {
     ]);
     profile.value = profileData;
     recentHistory.value = historyData.history || [];
-
     form.value = {
       name: profileData.name || "",
       bio: profileData.bio || "",
