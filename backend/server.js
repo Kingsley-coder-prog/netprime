@@ -1,96 +1,73 @@
-require("dotenv").config();
-require("express-async-errors");
+"use strict";
 
-// express
-const express = require("express");
-const app = express();
+/**
+ * server.js — Monolith mode entry point
+ * Starts all microservices in a single process for free tier deployment.
+ * Each service still runs on its own port and the gateway proxies between them.
+ *
+ * Usage: node server.js
+ */
 
-// other packages
-const swaggerUi = require("swagger-ui-express");
-const swaggerSpec = require("./swagger.js");
-const morgan = require("morgan");
-const cookieParser = require("cookie-parser");
-const fileUpload = require("express-fileupload");
-const rateLimiter = require("express-rate-limit");
-const helmet = require("helmet");
-const xss = require("xss-clean");
-const cors = require("cors");
-const mongoSanitize = require("express-mongo-sanitize");
+const { spawn } = require("child_process");
+const path = require("path");
 
-// Connect to Database
-const connectDB = require("./config/database.js");
+const services = [
+  { name: "auth", script: "services/auth-service/index.js", port: 3001 },
+  { name: "user", script: "services/user-service/index.js", port: 3002 },
+  { name: "movie", script: "services/movie-service/index.js", port: 3003 },
+  { name: "stream", script: "services/stream-service/index.js", port: 3004 },
+  { name: "upload", script: "services/upload-service/index.js", port: 3005 },
+  {
+    name: "notification",
+    script: "services/notification-service/index.js",
+    port: 3006,
+  },
+  { name: "gateway", script: "gateway/index.js", port: 3000 },
+];
 
-// Routers
-const authRoutes = require("./routes/authRoutes.js");
-const movieRoutes = require("./routes/movieRoutes.js");
-const genreRoutes = require("./routes/genreRoutes.js");
-const userRoutes = require("./routes/userRoutes.js");
+const processes = [];
 
-// Middleware
-app.use(
-  cors({
-    origin: process.env.FRONTEND_URL || "http://localhost:5173",
-    credentials: true,
-  }),
-);
-const errorHandler = require("./middleware/errorHandler.js");
+function startService(service) {
+  const proc = spawn("node", [path.join(__dirname, service.script)], {
+    env: { ...process.env },
+    stdio: ["ignore", "pipe", "pipe"],
+  });
 
-// security
-app.set("trust proxy", 1);
-app.use(
-  rateLimiter({
-    windowMs: 15 * 60 * 1000,
-    max: 60,
-  }),
-);
+  proc.stdout.on("data", (data) => {
+    process.stdout.write(`[${service.name}] ${data}`);
+  });
 
-app.use(helmet());
-app.use(cors());
-app.use(xss());
-app.use(mongoSanitize());
-app.use(express.urlencoded({ extended: true }));
-app.use(morgan("tiny"));
-app.use(express.json());
-app.use(cookieParser(process.env.JWT_SECRET));
-app.use(express.static("./public"));
-app.use(fileUpload());
+  proc.stderr.on("data", (data) => {
+    process.stderr.write(`[${service.name}] ${data}`);
+  });
 
-// Routes
-app.get("/", (req, res) => {
-  res.send("netprime api");
-});
-app.get("/api/v1", (req, res) => {
-  res.send("netprime api");
-});
+  proc.on("exit", (code, signal) => {
+    if (signal !== "SIGTERM" && signal !== "SIGINT") {
+      console.log(
+        `[${service.name}] exited with code ${code}, restarting in 3s...`,
+      );
+      setTimeout(() => startService(service), 3000);
+    }
+  });
 
-app.use("/api/v1/auth", authRoutes);
-app.use("/api/v1/movies", movieRoutes);
-app.use("/api/v1/genres", genreRoutes);
-app.use("/api/v1/users", userRoutes);
+  processes.push({ service, proc });
+  console.log(`[server] Started ${service.name} on port ${service.port}`);
+  return proc;
+}
 
-// Swagger UI
-app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
-app.get("/api-docs.json", (req, res) => res.json(swaggerSpec));
+// Start all services
+console.log("[server] Starting all Netprime services...");
+services.forEach(startService);
 
-// Health Check
-app.get("/api/health", (req, res) => {
-  res.json({ status: "Backend is running" });
-});
-
-// Error Handler
-app.use(errorHandler);
-
-const port = process.env.PORT || 5000;
-const start = async () => {
-  try {
-    await connectDB(process.env.MONGO_URL);
-    app.listen(
-      port,
-      console.log(`🎬 NetPrime Backend Server running on port ${port}`),
-    );
-  } catch (error) {
-    console.error("Failed to connect to database:", error);
-    process.exit(1);
-  }
+// Graceful shutdown
+const shutdown = (signal) => {
+  console.log(`[server] ${signal} received — shutting down all services...`);
+  processes.forEach(({ service, proc }) => {
+    console.log(`[server] Stopping ${service.name}...`);
+    proc.kill("SIGTERM");
+  });
+  setTimeout(() => process.exit(0), 5000);
 };
-start();
+
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT", () => shutdown("SIGINT"));
