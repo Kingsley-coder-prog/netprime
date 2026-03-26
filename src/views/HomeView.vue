@@ -170,7 +170,7 @@ onMounted(async () => {
       })
     );
 
-    // Fetch watch history — get full movie objects with progress
+    // Fetch watch history — get full movie objects with progress data
     if (auth.isAuthenticated) {
       const history = await streamService
         .getHistory({ limit: 10 })
