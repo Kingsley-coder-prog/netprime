@@ -155,7 +155,7 @@ onMounted(async () => {
       .map((g) => (typeof g === "object" ? g.genre : g))
       .filter(Boolean);
 
-    // Build genre cards with TMDB backdrops
+    // Build genre cards with TMDB backdrops asynchronously to avoid blocking the main content load
     genreCards.value = await Promise.all(
       genres.value.map(async (name) => {
         try {
