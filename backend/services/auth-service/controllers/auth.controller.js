@@ -32,9 +32,9 @@ const sendTokenResponse = (res, user, tokens, statusCode = 200) => {
   res.cookie("refreshToken", tokens.refreshToken, {
     httpOnly: true,
     secure: isProduction,
-    sameSite: isProduction ? "strict" : "lax",
+    sameSite: isProduction ? "none" : "lax",
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    path: "/api/auth/refresh", // Only sent to refresh endpoint
+    path: "/", // Only sent to refresh endpoint
   });
 
   return res.status(statusCode).json({
@@ -193,7 +193,7 @@ const logout = async (req, res, next) => {
       await redis.set(key, "1", "EX", 15 * 60); // Match access token TTL
     }
 
-    res.clearCookie("refreshToken", { path: "/api/auth/refresh" });
+    res.clearCookie("refreshToken", { path: "/" });
     res.json({ success: true, message: "Logged out successfully" });
   } catch (err) {
     next(err);
@@ -207,7 +207,7 @@ const logout = async (req, res, next) => {
 const logoutAll = async (req, res, next) => {
   try {
     await User.findByIdAndUpdate(req.user.id, { refreshTokens: [] });
-    res.clearCookie("refreshToken", { path: "/api/auth/refresh" });
+    res.clearCookie("refreshToken", { path: "/" });
     res.json({ success: true, message: "Logged out from all devices" });
   } catch (err) {
     next(err);
