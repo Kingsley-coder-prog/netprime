@@ -1,152 +1,160 @@
-# Spins up everything locally
+# backend/infra/docker/docker-compose.yml
+# Production docker-compose — uses MongoDB Atlas + Upstash (no local DB containers)
+# Run from the backend/ directory: docker-compose -f infra/docker/docker-compose.yml up -d
 
 version: '3.9'
 
+# ---- Shared configuration ----
+x-common-service: &common-service
+  build:
+    context: ../..
+    dockerfile: infra/docker/Dockerfile
+  env_file: ../../.env
+  restart: unless-stopped
+  networks:
+    - netprime-net
+
+x-common-env: &common-env
+  NODE_ENV: production
+
 services:
 
-  # ---- Databases ----
-
-  mongodb:
-    image: mongo:7.0
-    container_name: cinemax-mongo
-    restart: unless-stopped
-    ports:
-      - "27017:27017"
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: admin
-      MONGO_INITDB_ROOT_PASSWORD: secret
-      MONGO_INITDB_DATABASE: cinemax
-    volumes:
-      - mongo_data:/data/db
-    networks:
-      - cinemax-net
-    healthcheck:
-      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
-      interval: 10s
-      retries:  5
-
-  redis:
-    image: redis:7.2-alpine
-    container_name: cinemax-redis
-    restart: unless-stopped
-    ports:
-      - "6379:6379"
-    command: redis-server --appendonly yes
-    volumes:
-      - redis_data:/data
-    networks:
-      - cinemax-net
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      retries:  5
-
-  # ---- Services ----
-
+  # ================================================================
+  # GATEWAY — Single entry point, port 3000
+  # ================================================================
   gateway:
-    build:
-      context: ..
-      dockerfile: infra/docker/Dockerfile
-    container_name: cinemax-gateway
-    restart: unless-stopped
+    <<: *common-service
+    container_name: netprime-gateway
     ports:
       - "3000:3000"
     environment:
-      NODE_ENV: production
+      <<: *common-env
       PORT: 3000
-      MONGO_URI: mongodb://admin:secret@mongodb:27017/cinemax?authSource=admin
-      REDIS_HOST: redis
-    env_file: ../.env
-    depends_on:
-      mongodb: { condition: service_healthy }
-      redis:   { condition: service_healthy }
-    networks:
-      - cinemax-net
     command: node gateway/index.js
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
 
+  # ================================================================
+  # AUTH SERVICE — Port 3001
+  # ================================================================
   auth-service:
-    build:
-      context: ..
-      dockerfile: infra/docker/Dockerfile
-    container_name: cinemax-auth
-    restart: unless-stopped
+    <<: *common-service
+    container_name: netprime-auth
     ports:
       - "3001:3001"
-    env_file: ../.env
     environment:
-      NODE_ENV: production
+      <<: *common-env
       AUTH_SERVICE_PORT: 3001
-      MONGO_URI: mongodb://admin:secret@mongodb:27017/cinemax?authSource=admin
-      REDIS_HOST: redis
-    depends_on:
-      mongodb: { condition: service_healthy }
-      redis:   { condition: service_healthy }
-    networks:
-      - cinemax-net
     command: node services/auth-service/index.js
 
+  # ================================================================
+  # USER SERVICE — Port 3002
+  # ================================================================
+  user-service:
+    <<: *common-service
+    container_name: netprime-user
+    ports:
+      - "3002:3002"
+    environment:
+      <<: *common-env
+      USER_SERVICE_PORT: 3002
+    command: node services/user-service/index.js
+
+  # ================================================================
+  # MOVIE SERVICE — Port 3003
+  # ================================================================
   movie-service:
-    build:
-      context: ..
-      dockerfile: infra/docker/Dockerfile
-    container_name: cinemax-movie
-    restart: unless-stopped
+    <<: *common-service
+    container_name: netprime-movie
     ports:
       - "3003:3003"
-    env_file: ../.env
     environment:
-      NODE_ENV: production
+      <<: *common-env
       MOVIE_SERVICE_PORT: 3003
-      MONGO_URI: mongodb://admin:secret@mongodb:27017/cinemax?authSource=admin
-      REDIS_HOST: redis
-    depends_on:
-      - mongodb
-      - redis
-    networks:
-      - cinemax-net
     command: node services/movie-service/index.js
 
+  # ================================================================
+  # STREAM SERVICE — Port 3004
+  # ================================================================
+  stream-service:
+    <<: *common-service
+    container_name: netprime-stream
+    ports:
+      - "3004:3004"
+    environment:
+      <<: *common-env
+      STREAM_SERVICE_PORT: 3004
+    command: node services/stream-service/index.js
+
+  # ================================================================
+  # UPLOAD SERVICE — Port 3005
+  # ================================================================
   upload-service:
-    build:
-      context: ..
-      dockerfile: infra/docker/Dockerfile
-    container_name: cinemax-upload
-    restart: unless-stopped
+    <<: *common-service
+    container_name: netprime-upload
     ports:
       - "3005:3005"
-    env_file: ../.env
     environment:
-      NODE_ENV: production
+      <<: *common-env
       UPLOAD_SERVICE_PORT: 3005
-      MONGO_URI: mongodb://admin:secret@mongodb:27017/cinemax?authSource=admin
-      REDIS_HOST: redis
-    depends_on:
-      - mongodb
-      - redis
-    networks:
-      - cinemax-net
     command: node services/upload-service/index.js
 
-  transcode-worker:
-    build:
-      context: ..
-      dockerfile: infra/docker/Dockerfile.worker
-    container_name: cinemax-transcoder
-    restart: unless-stopped
-    env_file: ../.env
+  # ================================================================
+  # NOTIFICATION SERVICE — Port 3006
+  # ================================================================
+  notification-service:
+    <<: *common-service
+    container_name: netprime-notification
+    ports:
+      - "3006:3006"
     environment:
-      NODE_ENV: production
-      REDIS_HOST: redis
-    depends_on:
-      - redis
-    networks:
-      - cinemax-net
-    command: node workers/transcoder/index.js
+      <<: *common-env
+      NOTIFICATION_SERVICE_PORT: 3006
+    command: node services/notification-service/index.js
 
-volumes:
-  mongo_data:
-  redis_data:
+  # ================================================================
+  # TRANSCODER WORKER — No port (background worker)
+  # ================================================================
+  transcoder-worker:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.worker
+    container_name: netprime-transcoder
+    env_file: ../../.env
+    environment:
+      <<: *common-env
+    restart: unless-stopped
+    networks:
+      - netprime-net
+    command: node workers/transcoder/index.js
+    # Workers need more memory for FFmpeg
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 512M
+
+  # ================================================================
+  # THUMBNAIL WORKER — No port (background worker)
+  # ================================================================
+  thumbnail-worker:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.worker
+    container_name: netprime-thumbnail
+    env_file: ../../.env
+    environment:
+      <<: *common-env
+    restart: unless-stopped
+    networks:
+      - netprime-net
+    command: node workers/thumbnail-generator/index.js
 
 networks:
-  cinemax-net:
+  netprime-net:
     driver: bridge

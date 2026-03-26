@@ -1,36 +1,63 @@
 "use strict";
 
+// backend/workers/transcoder/utils/ffmpeg.js
+
 const ffmpeg = require("fluent-ffmpeg");
 const path = require("path");
 const fs = require("fs");
-const os = require("os");
 const { execSync } = require("child_process");
 const { createServiceLogger } = require("../../../shared/logger");
 
 const logger = createServiceLogger("transcoder:ffmpeg");
 
-// Explicitly set ffmpeg/ffprobe paths
-try {
-  const ffmpegPath = execSync("where ffmpeg", { encoding: "utf8" })
-    .trim()
-    .split("\n")[0]
-    .trim();
-  const ffprobePath = execSync("where ffprobe", { encoding: "utf8" })
-    .trim()
-    .split("\n")[0]
-    .trim();
-  ffmpeg.setFfmpegPath(ffmpegPath);
-  ffmpeg.setFfprobePath(ffprobePath);
-  logger.info("FFmpeg path set to: " + ffmpegPath);
-  logger.info("FFprobe path set to: " + ffprobePath);
-} catch (err) {
-  logger.warn("Could not auto-detect ffmpeg/ffprobe:", err.message);
+// ── FFmpeg path resolution ─────────────────────────────────────────────────
+// Priority order:
+// 1. Environment variables (set in Dockerfile.worker for Docker)
+// 2. Auto-detect via `which` (Linux/Mac) or `where` (Windows)
+// 3. Fall through — fluent-ffmpeg will use system PATH
+
+function resolveFfmpegPaths() {
+  // 1. From environment variables (Docker sets these)
+  if (process.env.FFMPEG_PATH && process.env.FFPROBE_PATH) {
+    ffmpeg.setFfmpegPath(process.env.FFMPEG_PATH);
+    ffmpeg.setFfprobePath(process.env.FFPROBE_PATH);
+    logger.info("FFmpeg path set to: " + process.env.FFMPEG_PATH);
+    logger.info("FFprobe path set to: " + process.env.FFPROBE_PATH);
+    return;
+  }
+
+  // 2. Auto-detect based on OS
+  const isWindows = process.platform === "win32";
+  const findCmd = isWindows ? "where" : "which";
+
+  try {
+    const ffmpegPath = execSync(`${findCmd} ffmpeg`, { encoding: "utf8" })
+      .trim()
+      .split("\n")[0]
+      .trim();
+    const ffprobePath = execSync(`${findCmd} ffprobe`, { encoding: "utf8" })
+      .trim()
+      .split("\n")[0]
+      .trim();
+
+    ffmpeg.setFfmpegPath(ffmpegPath);
+    ffmpeg.setFfprobePath(ffprobePath);
+    logger.info("FFmpeg path set to: " + ffmpegPath);
+    logger.info("FFprobe path set to: " + ffprobePath);
+  } catch (err) {
+    logger.warn(
+      "Could not auto-detect ffmpeg/ffprobe via " +
+        findCmd +
+        ": " +
+        err.message,
+    );
+    logger.warn("Falling back to system PATH — ensure ffmpeg is installed");
+  }
 }
 
-/**
- * Quality profiles — defines the FFmpeg output settings per quality tier.
- * Each profile produces an HLS stream (segmented .ts files + .m3u8 manifest).
- */
+resolveFfmpegPaths();
+
+// ── Quality profiles ───────────────────────────────────────────────────────
 const QUALITY_PROFILES = [
   {
     quality: "240p",
@@ -69,16 +96,7 @@ const QUALITY_PROFILES = [
   },
 ];
 
-/**
- * Transcode a single video file into HLS format at a given quality.
- *
- * @param {object} options
- * @param {string} options.inputPath    - Local path to downloaded raw video
- * @param {string} options.outputDir    - Local directory to write HLS segments
- * @param {object} options.profile      - Quality profile from QUALITY_PROFILES
- * @param {function} options.onProgress - Callback({ percent }) for progress updates
- * @returns {Promise<{ manifestPath, durationSec }>}
- */
+// ── transcodeToHLS ─────────────────────────────────────────────────────────
 const transcodeToHLS = ({ inputPath, outputDir, profile, onProgress }) => {
   return new Promise((resolve, reject) => {
     const manifestPath = path.join(outputDir, "index.m3u8");
@@ -94,10 +112,9 @@ const transcodeToHLS = ({ inputPath, outputDir, profile, onProgress }) => {
       .size(`${profile.width}x${profile.height}`)
       .videoBitrate(profile.videoBitrate)
       .audioBitrate(profile.audioBitrate)
-      // HLS output options
       .outputOptions([
-        "-hls_time 6", // 6-second segments
-        "-hls_playlist_type vod", // VOD manifest (not live)
+        "-hls_time 6",
+        "-hls_playlist_type vod",
         "-hls_segment_filename",
         segmentPath,
         "-hls_flags independent_segments",
@@ -105,7 +122,6 @@ const transcodeToHLS = ({ inputPath, outputDir, profile, onProgress }) => {
       ])
       .output(manifestPath)
       .on("codecData", (data) => {
-        // Parse duration from codec info e.g. "01:32:45.00"
         const parts = data.duration?.split(":");
         if (parts?.length === 3) {
           durationSec = Math.round(
@@ -132,9 +148,7 @@ const transcodeToHLS = ({ inputPath, outputDir, profile, onProgress }) => {
   });
 };
 
-/**
- * Get video metadata (duration, resolution, codec) without transcoding.
- */
+// ── getVideoMetadata ───────────────────────────────────────────────────────
 const getVideoMetadata = (inputPath) => {
   return new Promise((resolve, reject) => {
     ffmpeg.ffprobe(inputPath, (err, metadata) => {
@@ -159,10 +173,7 @@ const getVideoMetadata = (inputPath) => {
   });
 };
 
-/**
- * Determine which quality profiles to generate based on source resolution.
- * No point upscaling — skip profiles higher than source.
- */
+// ── getApplicableProfiles ──────────────────────────────────────────────────
 const getApplicableProfiles = (sourceHeight) => {
   return QUALITY_PROFILES.filter((p) => p.height <= sourceHeight);
 };
