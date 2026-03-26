@@ -29,7 +29,8 @@ app.use(
     origin: config.cors.origin,
     credentials: config.cors.credentials,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
+    allowedHeaders: ["Content-Type", "Authorization", "Cookie"],
+    exposedHeaders: ["Set-Cookie"],
   }),
 );
 app.use(compression());
@@ -137,6 +138,7 @@ const proxy = (target, pathRewrite) =>
     target,
     changeOrigin: true,
     pathRewrite,
+    cookieDomainRewrite: "",
     on: {
       proxyReq: (proxyReq, req) => {
         // Explicitly forward user context headers injected by auth middleware
@@ -144,6 +146,9 @@ const proxy = (target, pathRewrite) =>
           proxyReq.setHeader("x-user-id", req.headers["x-user-id"]);
         if (req.headers["x-user-role"])
           proxyReq.setHeader("x-user-role", req.headers["x-user-role"]);
+        // Forward cookies to downstream services
+        if (req.headers["cookie"])
+          proxyReq.setHeader("cookie", req.headers["cookie"]);
       },
       error: (err, req, res) => {
         logger.error(`Proxy error to ${target}: ${err.message}`);
