@@ -176,9 +176,11 @@
 <script setup>
 import { ref, onMounted } from "vue";
 import { userService } from "../../services/user.service";
+import { useAuthStore } from "../../stores/auth.store";
 import { useToast } from "../../composables/useToast";
 
 const toast = useToast();
+const auth = useAuthStore();
 const users = ref([]);
 const loading = ref(true);
 const pagination = ref({ total: 0, pages: 1 });
@@ -208,6 +210,11 @@ async function updateSubscription(user, plan) {
     if (!user.subscription) user.subscription = {};
     user.subscription.plan = plan;
     toast.success(`Subscription updated to ${plan}`);
+
+    // If updating the currently logged-in user, refresh auth store
+    if (user._id === auth.user?.id || user.email === auth.user?.email) {
+      await auth.refreshProfile();
+    }
   } catch {
     toast.error("Failed to update subscription");
   }
