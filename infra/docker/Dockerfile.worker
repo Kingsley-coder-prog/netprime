@@ -1,39 +1,29 @@
 # backend/infra/docker/Dockerfile.worker
-# Used for transcoder and thumbnail-generator workers
-# Includes FFmpeg for video processing
-
-# ---- Base with FFmpeg ----
 FROM node:20-alpine AS base
 WORKDIR /app
-
-# Install FFmpeg + tini
 RUN apk add --no-cache \
     ffmpeg \
     tini \
     && ffmpeg -version
-
 ENTRYPOINT ["/sbin/tini", "--"]
 
-# ---- Dependencies ----
 FROM base AS deps
 COPY package*.json ./
 RUN npm ci --only=production && npm cache clean --force
 
-# ---- Final image ----
 FROM base AS final
 ENV NODE_ENV=production
-# Tell FFmpeg utils to use the Alpine system FFmpeg
 ENV FFMPEG_PATH=/usr/bin/ffmpeg
 ENV FFPROBE_PATH=/usr/bin/ffprobe
 
-# Non-root user
 RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001
-# Workers need write access to /tmp for video processing
-RUN mkdir -p /tmp/cinemax-transcode && chown nodejs:nodejs /tmp/cinemax-transcode
+# Create required directories with correct permissions
+RUN mkdir -p /tmp/cinemax-transcode /app/logs \
+    && chown -R nodejs:nodejs /tmp/cinemax-transcode /app/logs
+
 USER nodejs
 
 COPY --from=deps --chown=nodejs:nodejs /app/node_modules ./node_modules
 COPY --chown=nodejs:nodejs . .
 
-# Default: transcoder. Override for thumbnail worker
 CMD ["node", "workers/transcoder/index.js"]
