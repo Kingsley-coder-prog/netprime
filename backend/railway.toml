@@ -1,0 +1,8 @@
+# backend/railway.toml
+[build]
+dockerfilePath = "infra/docker/Dockerfile.worker"
+
+[deploy]
+startCommand = "node workers/transcoder/index.js"
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 3
