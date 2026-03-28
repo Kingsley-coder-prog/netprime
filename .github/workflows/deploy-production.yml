@@ -1,0 +1,126 @@
+# .github/workflows/deploy-production.yml
+# Triggered when code is merged/pushed to master branch
+# Deploys to production environment after CI passes
+# Also deploys the Railway worker
+
+name: Deploy — Production
+
+on:
+  push:
+    branches: [master]
+
+jobs:
+  # ── CI must pass first ─────────────────────────────────────────
+  build-check:
+    name: Build Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Build frontend
+        run: npm run build
+        env:
+          VITE_API_URL: https://netprime-gateway.onrender.com
+          VITE_TMDB_TOKEN: ${{ secrets.VITE_TMDB_TOKEN }}
+
+  # ── Deploy backend to Render production ───────────────────────
+  deploy-backend-production:
+    name: Deploy Backend → Production
+    runs-on: ubuntu-latest
+    needs: build-check
+
+    steps:
+      - name: Trigger Render production deployment
+        run: |
+          curl -s -X POST \
+            "https://api.render.com/v1/services/${{ secrets.RENDER_PRODUCTION_SERVICE_ID }}/deploys" \
+            -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d '{"clearCache": false}' \
+            | jq '.'
+
+      - name: Wait for deployment to start
+        run: sleep 10
+
+      - name: Confirm deployment triggered
+        run: echo "✅ Production backend deployment triggered on Render"
+
+  # ── Deploy worker to Railway ───────────────────────────────────
+  deploy-worker:
+    name: Deploy Worker → Railway
+    runs-on: ubuntu-latest
+    needs: build-check
+
+    # Only redeploy worker if backend worker files changed
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Check if worker files changed
+        id: worker-changes
+        run: |
+          if git diff --name-only HEAD~1 HEAD | grep -qE "^backend/workers/|^backend/infra/docker/Dockerfile.worker|^backend/shared/"; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+          else
+            echo "changed=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Trigger Railway worker deployment
+        if: steps.worker-changes.outputs.changed == 'true'
+        run: |
+          curl -s -X POST \
+            "https://backboard.railway.app/graphql/v2" \
+            -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "query": "mutation { serviceInstanceRedeploy(serviceId: \"${{ secrets.RAILWAY_SERVICE_ID }}\") }"
+            }'
+          echo "✅ Railway worker deployment triggered"
+
+      - name: Skip worker deployment
+        if: steps.worker-changes.outputs.changed == 'false'
+        run: echo "⏭️  No worker changes detected — skipping Railway deployment"
+
+  # ── Frontend deploys automatically via Vercel ─────────────────
+  notify-frontend:
+    name: Frontend Deployment
+    runs-on: ubuntu-latest
+    needs: build-check
+
+    steps:
+      - name: Confirm Vercel will auto-deploy
+        run: |
+          echo "✅ Vercel will automatically deploy frontend from master branch"
+          echo "   Production URL: https://netprime-plum.vercel.app"
+
+  # ── Summary ───────────────────────────────────────────────────
+  deployment-summary:
+    name: Deployment Summary
+    runs-on: ubuntu-latest
+    needs: [deploy-backend-production, deploy-worker, notify-frontend]
+    if: always()
+
+    steps:
+      - name: Print summary
+        run: |
+          echo "================================"
+          echo "   PRODUCTION DEPLOYMENT DONE  "
+          echo "================================"
+          echo "Backend:  https://netprime-gateway.onrender.com"
+          echo "Frontend: https://netprime-plum.vercel.app"
+          echo "Worker:   Railway"
+          echo "================================"

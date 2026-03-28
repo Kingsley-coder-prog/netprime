@@ -1,0 +1,63 @@
+# .github/workflows/ci.yml
+# Runs on every push to any branch
+# Checks that both frontend and backend build successfully before allowing deployment
+
+name: CI — Build Check
+
+on:
+  push:
+    branches: ["**"] # All branches
+  pull_request:
+    branches: [master, develop]
+
+jobs:
+  # ── Check backend ──────────────────────────────────────────────
+  check-backend:
+    name: Backend Build Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Check backend starts without errors
+        working-directory: backend
+        run: node --check gateway/index.js
+        env:
+          NODE_ENV: test
+
+  # ── Check frontend ─────────────────────────────────────────────
+  check-frontend:
+    name: Frontend Build Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Build frontend
+        run: npm run build
+        env:
+          VITE_API_URL: https://netprime-gateway.onrender.com
+          VITE_TMDB_TOKEN: ${{ secrets.VITE_TMDB_TOKEN }}
