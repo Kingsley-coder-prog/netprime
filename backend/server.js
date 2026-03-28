@@ -4,6 +4,7 @@
  * server.js — Monolith mode entry point
  * Starts all microservices in a single process for free tier deployment.
  * Each service still runs on its own port and the gateway proxies between them.
+ * This is not recommended for production but allows us to deploy on platforms like Render's free tier without needing multiple services or a container orchestration system.
  *
  * Usage: node server.js
  */
