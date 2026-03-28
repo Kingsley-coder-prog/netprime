@@ -171,6 +171,9 @@ app.use("/api/users", authenticate, proxy(config.services.user));
 app.use("/api/movies", optionalAuthenticate, proxy(config.services.movie));
 app.use("/api/stream", authenticate, proxy(config.services.stream));
 app.use("/api/uploads", authenticate, proxy(config.services.upload));
+// Notification - internal only (requires x-internal-secret header)
+app.use('/api/notification', proxy(config.services.notification));
+
 
 // ---- 404 ----
 app.use("*", (req, res) => {
