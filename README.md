@@ -11,6 +11,7 @@
 - [NETPRIME 🎬](#netprime-)
   - [Table of Contents](#table-of-contents)
   - [Overview](#overview)
+  - [Architectural Design](#architectural-design)
   - [Architecture](#architecture)
   - [Tech Stack](#tech-stack)
     - [Backend](#backend)
@@ -20,6 +21,11 @@
     - [User Features](#user-features)
     - [Admin Features](#admin-features)
     - [Technical Features](#technical-features)
+  - [Screenshots](#screenshots)
+    - [Home Page](#home-page)
+    - [Movie Detail](#movie-detail)
+    - [Admin Console](#admin-console)
+    - [Admin Console](#admin-console-1)
   - [Services](#services)
   - [Getting Started](#getting-started)
     - [Prerequisites](#prerequisites)
@@ -42,6 +48,12 @@
 Netprime is a full-stack streaming platform inspired by Netflix. It supports video upload, automated HLS transcoding into multiple quality levels (240p → 1080p), adaptive bitrate playback, JWT authentication with refresh token rotation, role-based access control, and a complete admin console.
 
 The project was designed specifically to practice real-world system design concepts — microservices, event-driven architecture, distributed job queuing, CDN integration, and cloud-native deployment.
+
+---
+
+## Architectural Design
+
+![System Architecture](docs/architecture.png)
 
 ---
 
@@ -155,6 +167,22 @@ The project was designed specifically to practice real-world system design conce
 - Background job processing with lock renewal and retry logic
 - CDN-served HLS segments via Cloudflare R2 public bucket
 - CORS configured for cross-domain cookie support (`sameSite: none`, `secure: true`)
+
+---
+
+## Screenshots
+
+### Home Page
+![Home Page](docs/screenshots/home.png)
+
+### Movie Detail
+![Movie Detail](docs/screenshots/movie-detail.png)
+
+### Admin Console
+![Admin Console](docs/screenshots/admin1.png)
+
+### Admin Console
+![Admin Console](docs/screenshots/admin2.png)
 
 ---
 

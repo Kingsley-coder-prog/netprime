@@ -1,6 +1,6 @@
 <template>
   <div class="min-h-screen">
-    <HeroBanner :movie="heroMovie" :loading="loading" />
+    <HeroBanner :movies="heroMovies" :loading="loading" />
 
     <div class="relative z-10 pb-20 space-y-12">
       <MovieRow
@@ -132,9 +132,12 @@ const genres = ref([]);
 const genreCards = ref([]);
 const watchHistory = ref([]);
 
-const heroMovie = computed(
-  () => featuredMovies.value[0] || trendingMovies.value[0] || null
-);
+const heroMovies = computed(() => {
+  const movies = featuredMovies.value.length
+    ? featuredMovies.value
+    : trendingMovies.value;
+  return movies.slice(0, 4);
+});
 
 onMounted(async () => {
   loading.value = true;

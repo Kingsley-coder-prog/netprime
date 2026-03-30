@@ -7,17 +7,14 @@
         : 'bg-gradient-to-b from-black/80 to-transparent'
     "
   >
-    <div class="flex items-center justify-between px-6 md:px-12 py-4">
-      <!-- Logo -->
+    <div class="flex items-center justify-between px-4 md:px-12 py-4">
       <router-link to="/" class="flex-shrink-0">
         <span
-          class="text-red-500 font-black text-2xl tracking-widest hover:text-red-400 transition-colors"
+          class="text-red-500 font-black text-xl md:text-2xl tracking-widest hover:text-red-400 transition-colors"
+          >NETPRIME</span
         >
-          NETPRIME
-        </span>
       </router-link>
 
-      <!-- Desktop Nav -->
       <nav class="hidden md:flex items-center gap-8">
         <router-link
           v-for="item in navItems"
@@ -32,10 +29,9 @@
         </router-link>
       </nav>
 
-      <!-- Right side -->
-      <div class="flex items-center gap-4">
-        <!-- Search -->
-        <div class="relative">
+      <div class="flex items-center gap-2 md:gap-4">
+        <!-- Desktop search -->
+        <div class="relative hidden md:block">
           <button
             @click="toggleSearch"
             class="text-white/60 hover:text-white transition-colors p-1"
@@ -66,39 +62,35 @@
           </Transition>
         </div>
 
-        <!-- Guest buttons -->
         <template v-if="!auth.isAuthenticated">
           <router-link
             to="/auth"
-            class="bg-red-600 hover:bg-red-500 text-white text-sm font-semibold px-5 py-2 rounded transition-colors"
+            class="bg-red-600 hover:bg-red-500 text-white text-xs md:text-sm font-semibold px-3 md:px-5 py-1.5 md:py-2 rounded transition-colors"
+            >Sign In</router-link
           >
-            Sign In
-          </router-link>
         </template>
 
-        <!-- User menu -->
         <template v-else>
           <div class="relative" ref="userMenuRef">
             <button
               @click="userMenuOpen = !userMenuOpen"
-              class="flex items-center gap-2 group"
+              class="flex items-center gap-1.5 group"
             >
               <div
-                class="w-8 h-8 rounded bg-red-600 flex items-center justify-center text-sm font-bold text-white"
+                class="w-7 h-7 md:w-8 md:h-8 rounded bg-red-600 flex items-center justify-center text-xs md:text-sm font-bold text-white"
               >
                 {{ auth.user?.name?.[0]?.toUpperCase() }}
               </div>
               <Icon
                 icon="mdi:chevron-down"
-                class="text-white/60 text-sm transition-transform duration-200"
+                class="text-white/60 text-sm transition-transform duration-200 hidden sm:block"
                 :class="userMenuOpen ? 'rotate-180' : ''"
               />
             </button>
-
             <Transition name="dropdown">
               <div
                 v-if="userMenuOpen"
-                class="absolute right-0 top-12 w-56 bg-[#1a1a1a] border border-white/10 rounded-xl overflow-hidden shadow-2xl"
+                class="absolute right-0 top-10 md:top-12 w-52 md:w-56 bg-[#1a1a1a] border border-white/10 rounded-xl overflow-hidden shadow-2xl"
               >
                 <div class="px-4 py-3 border-b border-white/10">
                   <p class="text-white text-sm font-medium truncate">
@@ -110,11 +102,10 @@
                   <span
                     class="inline-block mt-1.5 text-xs px-2 py-0.5 rounded-full font-medium"
                     :class="planBadgeClass"
-                  >
-                    {{
+                    >{{
                       (auth.user?.subscription?.plan || "free").toUpperCase()
-                    }}
-                  </span>
+                    }}</span
+                  >
                 </div>
                 <div class="py-1">
                   <router-link
@@ -124,8 +115,7 @@
                     @click="userMenuOpen = false"
                     class="flex items-center gap-3 px-4 py-2.5 text-sm text-white/70 hover:text-white hover:bg-white/5 transition-colors"
                   >
-                    <Icon :icon="item.icon" class="text-base" />
-                    {{ item.label }}
+                    <Icon :icon="item.icon" class="text-base" />{{ item.label }}
                   </router-link>
                   <router-link
                     v-if="auth.isAdmin"
@@ -133,16 +123,15 @@
                     @click="userMenuOpen = false"
                     class="flex items-center gap-3 px-4 py-2.5 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors"
                   >
-                    <Icon icon="mdi:shield-account" class="text-base" />
-                    Admin Console
+                    <Icon icon="mdi:shield-account" class="text-base" />Admin
+                    Console
                   </router-link>
                   <hr class="my-1 border-white/10" />
                   <button
                     @click="handleLogout"
                     class="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-white/50 hover:text-red-400 hover:bg-red-500/10 transition-colors"
                   >
-                    <Icon icon="mdi:logout" class="text-base" />
-                    Sign out
+                    <Icon icon="mdi:logout" class="text-base" />Sign out
                   </button>
                 </div>
               </div>
@@ -150,31 +139,43 @@
           </div>
         </template>
 
-        <!-- Mobile menu -->
         <button
           @click="mobileMenuOpen = !mobileMenuOpen"
-          class="md:hidden text-white/60 hover:text-white"
+          class="md:hidden text-white/60 hover:text-white p-1"
         >
           <Icon
             :icon="mobileMenuOpen ? 'mdi:close' : 'mdi:menu'"
-            class="text-2xl"
+            class="text-xl"
           />
         </button>
       </div>
     </div>
 
-    <!-- Mobile nav -->
+    <!-- Mobile dropdown with search inside -->
     <Transition name="mobile-menu">
       <div
         v-if="mobileMenuOpen"
-        class="md:hidden bg-[#0a0a0a]/98 border-t border-white/10 px-6 py-4 space-y-1"
+        class="md:hidden bg-[#0a0a0a] border-t border-white/10 px-4 py-3 space-y-1"
       >
+        <div
+          class="flex items-center bg-white/5 border border-white/10 rounded-lg px-3 py-2 mb-3"
+        >
+          <Icon icon="mdi:magnify" class="text-white/40 mr-2 flex-shrink-0" />
+          <input
+            v-model="searchQuery"
+            @keyup.enter="handleSearch"
+            type="text"
+            placeholder="Search movies..."
+            class="bg-transparent text-white placeholder-white/30 text-sm outline-none flex-1 min-w-0"
+          />
+        </div>
         <router-link
           v-for="item in navItems"
           :key="item.label"
           :to="item.to"
           @click="mobileMenuOpen = false"
-          class="block text-white/70 hover:text-white py-2.5 text-sm font-medium transition-colors border-b border-white/5 last:border-0"
+          class="flex items-center py-3 text-sm font-medium transition-colors border-b border-white/5 last:border-0"
+          :class="isActive(item.to) ? 'text-white' : 'text-white/60'"
         >
           {{ item.label }}
         </router-link>
@@ -226,7 +227,6 @@ function isActive(to) {
   const path = to.split("?")[0];
   const query = to.includes("?") ? to.split("?")[1] : null;
   if (query) {
-    // For links with query params, check both path AND query match
     const param = query.split("=");
     return route.path === path && route.query[param[0]] === param[1];
   }
@@ -247,6 +247,7 @@ function handleSearch() {
   if (!searchQuery.value.trim()) return;
   router.push({ path: "/browse", query: { q: searchQuery.value } });
   closeSearch();
+  mobileMenuOpen.value = false;
 }
 
 async function handleLogout() {
