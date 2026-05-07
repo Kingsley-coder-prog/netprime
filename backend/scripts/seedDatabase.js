@@ -7,6 +7,7 @@ import connectDB from "../config/database.js";
 dotenv.config();
 
 const seedDatabase = async () => {
+  // Connect to MongoDB
   try {
     await connectDB();
 
